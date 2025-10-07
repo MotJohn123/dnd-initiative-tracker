@@ -38,6 +38,9 @@ export async function PUT(
     if (updates.currentTurnIndex !== undefined) {
       battle.currentTurnIndex = updates.currentTurnIndex;
     }
+    if (updates.currentRound !== undefined) {
+      battle.currentRound = updates.currentRound;
+    }
     if (updates.isActive !== undefined) {
       battle.isActive = updates.isActive;
     }
