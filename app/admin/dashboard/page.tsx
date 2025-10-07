@@ -119,18 +119,23 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!token) return;
 
-    const selectedGroup = groups.find(g => g._id === selectedGroupId);
-    if (!selectedGroup) return;
-
-    const battleCharacters = selectedGroup.characters.map((char, idx) => ({
-      id: `pc-${idx}-${Date.now()}`,
-      name: char.name,
-      isNPC: false,
-      isRevealed: true,
-      initiative: 0,
-      imageUrl: char.imageUrl,
-      sortOrder: idx,
-    }));
+    let battleCharacters: BattleCharacter[] = [];
+    
+    // Only add group characters if a group is selected
+    if (selectedGroupId) {
+      const selectedGroup = groups.find(g => g._id === selectedGroupId);
+      if (selectedGroup) {
+        battleCharacters = selectedGroup.characters.map((char, idx) => ({
+          id: `pc-${idx}-${Date.now()}`,
+          name: char.name,
+          isNPC: false,
+          isRevealed: true,
+          initiative: 0,
+          imageUrl: char.imageUrl,
+          sortOrder: idx,
+        }));
+      }
+    }
 
     try {
       // First, end any existing active battle
@@ -661,20 +666,22 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm mb-2">Player Group</label>
+                  <label className="block text-sm mb-2">Player Group (Optional)</label>
                   <select
                     value={selectedGroupId}
                     onChange={(e) => setSelectedGroupId(e.target.value)}
                     className="input-field"
-                    required
                   >
-                    <option value="">Select a group</option>
+                    <option value="">No group - Start empty</option>
                     {groups.map((group) => (
                       <option key={group._id} value={group._id}>
                         {group.name} ({group.characters.length} characters)
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    You can add characters after starting the battle
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button type="submit" className="btn-primary flex-1">

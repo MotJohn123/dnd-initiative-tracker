@@ -1,12 +1,30 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Battle from '@/models/Battle';
+import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await connectDB();
     
-    const battle = await Battle.findOne({ isActive: true }).sort({ updatedAt: -1 });
+    // Get token to identify the user
+    const token = getTokenFromRequest(request);
+    let userId = null;
+    
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded) {
+        userId = decoded.userId;
+      }
+    }
+    
+    // If no valid token, still try to find any active battle (for public view)
+    // But prioritize the authenticated user's battle if available
+    const query = userId 
+      ? { isActive: true, userId } 
+      : { isActive: true };
+    
+    const battle = await Battle.findOne(query).sort({ updatedAt: -1 });
 
     if (!battle) {
       return NextResponse.json({ battle: null });
