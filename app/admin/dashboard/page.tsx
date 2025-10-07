@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [showBattleForm, setShowBattleForm] = useState(false);
   const [showAddNPC, setShowAddNPC] = useState(false);
+  const [showAddPC, setShowAddPC] = useState(false);
   
   // Form states
   const [groupName, setGroupName] = useState('');
@@ -50,6 +51,8 @@ export default function AdminDashboard() {
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [npcName, setNpcName] = useState('');
   const [npcInitiative, setNpcInitiative] = useState(10);
+  const [pcName, setPcName] = useState('');
+  const [pcInitiative, setPcInitiative] = useState(10);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -209,6 +212,44 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to add NPC:', error);
+    }
+  };
+
+  const handleAddPC = async () => {
+    if (!token || !activeBattle) return;
+
+    const maxSortOrder = Math.max(...activeBattle.characters.map(c => c.sortOrder || 0), 0);
+
+    const newPC: BattleCharacter = {
+      id: `pc-${Date.now()}`,
+      name: pcName,
+      isNPC: false,
+      isRevealed: true,
+      initiative: pcInitiative,
+      sortOrder: maxSortOrder + 1,
+    };
+
+    const updatedCharacters = [...activeBattle.characters, newPC];
+
+    try {
+      const res = await fetch(`/api/battles/${activeBattle._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ characters: updatedCharacters }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setActiveBattle(data.battle);
+        setShowAddPC(false);
+        setPcName('');
+        setPcInitiative(10);
+      }
+    } catch (error) {
+      console.error('Failed to add PC:', error);
     }
   };
 
@@ -475,6 +516,9 @@ export default function AdminDashboard() {
                 </p>
               </div>
               <div className="flex gap-2">
+                <button onClick={() => setShowAddPC(true)} className="btn-primary text-sm">
+                  + Add PC
+                </button>
                 <button onClick={() => setShowAddNPC(true)} className="btn-primary text-sm">
                   + Add NPC
                 </button>
@@ -638,6 +682,47 @@ export default function AdminDashboard() {
                   </button>
                   <button
                     onClick={() => setShowAddNPC(false)}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add PC Modal */}
+        {showAddPC && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="card max-w-md w-full">
+              <h3 className="text-xl font-bold mb-4">Add Player Character</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-2">PC Name</label>
+                  <input
+                    type="text"
+                    value={pcName}
+                    onChange={(e) => setPcName(e.target.value)}
+                    className="input-field"
+                    placeholder="Character name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2">Initiative</label>
+                  <input
+                    type="number"
+                    value={pcInitiative}
+                    onChange={(e) => setPcInitiative(parseInt(e.target.value) || 0)}
+                    className="input-field"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleAddPC} className="btn-primary flex-1">
+                    Add
+                  </button>
+                  <button
+                    onClick={() => setShowAddPC(false)}
                     className="btn-secondary flex-1"
                   >
                     Cancel
