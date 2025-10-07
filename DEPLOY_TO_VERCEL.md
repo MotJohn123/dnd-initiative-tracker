@@ -33,7 +33,7 @@ Your code is ready to deploy! Follow these steps:
 2. Copy the commands GitHub shows and run them:
 ```bash
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/dnd-initiative-tracker.git
+git remote add origin https://github.com/MotJohn123/dnd-initiative-tracker
 git push -u origin main
 ```
 
@@ -62,7 +62,7 @@ Replace `YOUR_USERNAME` with your GitHub username!
 
 ### 4. Add Environment Variables ⚠️ IMPORTANT!
 
-Click "Environment Variables" and add these **EXACTLY**:
+Click "Environment Variables" and add these **TWO** variables:
 
 #### Variable 1:
 - **Name**: `MONGODB_URI`
@@ -74,10 +74,7 @@ Click "Environment Variables" and add these **EXACTLY**:
 - **Value**: `dnd-initiative-tracker-super-secret-jwt-key-for-authentication-2025`
 - Click "Add"
 
-#### Variable 3:
-- **Name**: `NEXTAUTH_URL`
-- **Value**: Leave EMPTY (Vercel sets this automatically)
-- Or you can skip this one entirely
+**Note**: You only need these TWO variables. Don't add NEXTAUTH_URL - Vercel handles that automatically.
 
 ### 5. Deploy!
 - Click "Deploy"
@@ -144,6 +141,11 @@ After deployment, test these:
 ---
 
 ## 🐛 Troubleshooting
+
+### "Environment Variable references Secret which does not exist"
+- ✅ **FIXED!** The vercel.json file has been removed
+- Simply add the environment variables directly in the Vercel dashboard
+- You only need `MONGODB_URI` and `JWT_SECRET`
 
 ### "Internal Server Error" after deployment
 - Check Vercel logs (Functions tab in Vercel dashboard)
