@@ -22,6 +22,7 @@ interface BattleCharacter {
   initiative: number;
   imageUrl?: string;
   isLair?: boolean;
+  sortOrder?: number;
 }
 
 interface Battle {
@@ -29,6 +30,7 @@ interface Battle {
   name: string;
   characters: BattleCharacter[];
   currentTurnIndex: number;
+  currentRound: number;
   isActive: boolean;
 }
 
@@ -127,9 +129,23 @@ export default function AdminDashboard() {
       isRevealed: true,
       initiative: 0,
       imageUrl: char.imageUrl,
+      sortOrder: idx,
     }));
 
     try {
+      // First, end any existing active battle
+      if (activeBattle) {
+        await fetch(`/api/battles/${activeBattle._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ isActive: false }),
+        });
+      }
+
+      // Then create the new battle
       const res = await fetch('/api/battles', {
         method: 'POST',
         headers: {
@@ -156,12 +172,15 @@ export default function AdminDashboard() {
   const handleAddNPC = async () => {
     if (!token || !activeBattle) return;
 
+    const maxSortOrder = Math.max(...activeBattle.characters.map(c => c.sortOrder || 0), 0);
+
     const newNPC: BattleCharacter = {
       id: `npc-${Date.now()}`,
       name: npcName,
       isNPC: true,
       isRevealed: false,
       initiative: npcInitiative,
+      sortOrder: maxSortOrder + 1,
     };
 
     const updatedCharacters = [...activeBattle.characters, newNPC];
@@ -191,6 +210,8 @@ export default function AdminDashboard() {
   const handleAddLair = async () => {
     if (!token || !activeBattle) return;
 
+    const maxSortOrder = Math.max(...activeBattle.characters.map(c => c.sortOrder || 0), 0);
+
     const lairAction: BattleCharacter = {
       id: `lair-${Date.now()}`,
       name: 'Lair Action',
@@ -198,6 +219,7 @@ export default function AdminDashboard() {
       isRevealed: true,
       initiative: 20,
       isLair: true,
+      sortOrder: maxSortOrder + 1,
     };
 
     const updatedCharacters = [...activeBattle.characters, lairAction];
@@ -306,8 +328,13 @@ export default function AdminDashboard() {
   const handleNextTurn = async () => {
     if (!token || !activeBattle) return;
 
-    const sortedCharacters = [...activeBattle.characters].sort((a, b) => b.initiative - a.initiative);
+    const sortedCharacters = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    
     const newIndex = (activeBattle.currentTurnIndex + 1) % sortedCharacters.length;
+    const newRound = newIndex === 0 ? (activeBattle.currentRound || 1) + 1 : (activeBattle.currentRound || 1);
 
     try {
       const res = await fetch(`/api/battles/${activeBattle._id}`, {
@@ -316,7 +343,10 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ currentTurnIndex: newIndex }),
+        body: JSON.stringify({ 
+          currentTurnIndex: newIndex,
+          currentRound: newRound
+        }),
       });
 
       if (res.ok) {
@@ -325,6 +355,56 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to advance turn:', error);
+    }
+  };
+
+  const handleMoveCharacter = async (charId: string, direction: 'up' | 'down') => {
+    if (!token || !activeBattle) return;
+
+    const sortedCharacters = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+
+    const currentIndex = sortedCharacters.findIndex(c => c.id === charId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sortedCharacters.length) return;
+
+    // Swap sortOrder values
+    const currentChar = sortedCharacters[currentIndex];
+    const targetChar = sortedCharacters[targetIndex];
+
+    // Only allow swapping characters with the same initiative
+    if (currentChar.initiative !== targetChar.initiative) return;
+
+    const updatedCharacters = activeBattle.characters.map(char => {
+      if (char.id === currentChar.id) {
+        return { ...char, sortOrder: targetChar.sortOrder || 0 };
+      }
+      if (char.id === targetChar.id) {
+        return { ...char, sortOrder: currentChar.sortOrder || 0 };
+      }
+      return char;
+    });
+
+    try {
+      const res = await fetch(`/api/battles/${activeBattle._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ characters: updatedCharacters }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setActiveBattle(data.battle);
+      }
+    } catch (error) {
+      console.error('Failed to move character:', error);
     }
   };
 
@@ -356,7 +436,10 @@ export default function AdminDashboard() {
   };
 
   const sortedBattleCharacters = activeBattle
-    ? [...activeBattle.characters].sort((a, b) => b.initiative - a.initiative)
+    ? [...activeBattle.characters].sort((a, b) => {
+        if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+      })
     : [];
 
   return (
@@ -376,9 +459,11 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-2xl font-bold">⚔️ {activeBattle.name}</h2>
                 <p className="text-gray-400 text-sm mt-1">
+                  <span className="text-primary font-semibold">Round {activeBattle.currentRound || 1}</span>
+                  {' • '}
                   Turn {activeBattle.currentTurnIndex + 1} of {sortedBattleCharacters.length}
                   {sortedBattleCharacters.length > 0 && (
-                    <span className="ml-2 text-primary">
+                    <span className="ml-2 text-white">
                       → {sortedBattleCharacters[activeBattle.currentTurnIndex]?.name}
                     </span>
                   )}
@@ -403,15 +488,44 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               {sortedBattleCharacters.map((char, index) => {
                 const isCurrentTurn = index === activeBattle.currentTurnIndex;
+                const hasSameInitiativeAbove = index > 0 && sortedBattleCharacters[index - 1].initiative === char.initiative;
+                const hasSameInitiativeBelow = index < sortedBattleCharacters.length - 1 && sortedBattleCharacters[index + 1].initiative === char.initiative;
+                
                 return (
                   <div
                     key={char.id}
-                    className={`flex items-center gap-4 p-4 rounded-lg border ${
+                    className={`flex items-center gap-2 p-4 rounded-lg border ${
                       isCurrentTurn
                         ? 'border-primary bg-primary/10'
                         : 'border-gray-700 bg-gray-800/30'
                     }`}
                   >
+                    {/* Sort arrows - only show if there are characters with same initiative */}
+                    <div className="flex flex-col gap-1">
+                      {hasSameInitiativeAbove ? (
+                        <button
+                          onClick={() => handleMoveCharacter(char.id, 'up')}
+                          className="text-gray-400 hover:text-white text-xs"
+                          title="Move up"
+                        >
+                          ▲
+                        </button>
+                      ) : (
+                        <div className="h-3"></div>
+                      )}
+                      {hasSameInitiativeBelow ? (
+                        <button
+                          onClick={() => handleMoveCharacter(char.id, 'down')}
+                          className="text-gray-400 hover:text-white text-xs"
+                          title="Move down"
+                        >
+                          ▼
+                        </button>
+                      ) : (
+                        <div className="h-3"></div>
+                      )}
+                    </div>
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold">{char.name}</span>

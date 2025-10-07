@@ -11,6 +11,7 @@ interface Character {
   initiative: number;
   imageUrl?: string;
   isLair?: boolean;
+  sortOrder?: number;
 }
 
 interface Battle {
@@ -18,6 +19,7 @@ interface Battle {
   name: string;
   characters: Character[];
   currentTurnIndex: number;
+  currentRound: number;
   updatedAt: string;
 }
 
@@ -30,7 +32,10 @@ export default function Home() {
 
   const battle: Battle | null = data?.battle || null;
   const sortedCharacters = battle?.characters
-    ? [...battle.characters].sort((a, b) => b.initiative - a.initiative)
+    ? [...battle.characters].sort((a, b) => {
+        if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+      })
     : [];
 
   if (error) {
@@ -77,6 +82,8 @@ export default function Home() {
           <h1 className="text-4xl sm:text-5xl font-bold mb-2">⚔️ Initiative Tracker</h1>
           <h2 className="text-xl sm:text-2xl text-primary font-semibold">{battle.name}</h2>
           <p className="text-gray-400 mt-2">
+            <span className="text-primary font-semibold">Round {battle.currentRound || 1}</span>
+            {' • '}
             Turn {battle.currentTurnIndex + 1} of {sortedCharacters.length}
           </p>
         </header>

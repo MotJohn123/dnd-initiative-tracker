@@ -8,6 +8,7 @@ export interface IBattleCharacter {
   initiative: number;
   imageUrl?: string;
   isLair?: boolean;
+  sortOrder?: number; // For manual sorting of same initiative
 }
 
 export interface IBattle extends Document {
@@ -15,6 +16,7 @@ export interface IBattle extends Document {
   name: string;
   characters: IBattleCharacter[];
   currentTurnIndex: number;
+  currentRound: number; // Track which round we're on
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -49,6 +51,10 @@ const BattleCharacterSchema: Schema = new Schema({
     type: Boolean,
     default: false,
   },
+  sortOrder: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const BattleSchema: Schema = new Schema({
@@ -68,6 +74,10 @@ const BattleSchema: Schema = new Schema({
   currentTurnIndex: {
     type: Number,
     default: 0,
+  },
+  currentRound: {
+    type: Number,
+    default: 1,
   },
   isActive: {
     type: Boolean,

@@ -29,6 +29,7 @@ export async function GET() {
         name: battle.name,
         characters: publicCharacters,
         currentTurnIndex: battle.currentTurnIndex,
+        currentRound: battle.currentRound || 1,
         updatedAt: battle.updatedAt,
       },
     });
