@@ -27,7 +27,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Home() {
   const { data, error, isLoading } = useSWR('/api/battles/active', fetcher, {
-    refreshInterval: 2000, // Poll every 2 seconds
+    refreshInterval: 500, // Poll every 0.5 seconds for fast updates
   });
 
   const battle: Battle | null = data?.battle || null;
