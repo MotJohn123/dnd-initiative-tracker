@@ -228,6 +228,9 @@ export default function AdminDashboard() {
       char.id === charId ? { ...char, initiative } : char
     );
 
+    // Sort characters by initiative after update
+    const sortedCharacters = updatedCharacters.sort((a, b) => b.initiative - a.initiative);
+
     try {
       const res = await fetch(`/api/battles/${activeBattle._id}`, {
         method: 'PUT',
@@ -235,7 +238,10 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ characters: updatedCharacters }),
+        body: JSON.stringify({ 
+          characters: sortedCharacters,
+          currentTurnIndex: 0 // Reset to first character after re-sorting
+        }),
       });
 
       if (res.ok) {
@@ -367,7 +373,17 @@ export default function AdminDashboard() {
         {activeBattle ? (
           <div className="card mb-8">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">⚔️ {activeBattle.name}</h2>
+              <div>
+                <h2 className="text-2xl font-bold">⚔️ {activeBattle.name}</h2>
+                <p className="text-gray-400 text-sm mt-1">
+                  Turn {activeBattle.currentTurnIndex + 1} of {sortedBattleCharacters.length}
+                  {sortedBattleCharacters.length > 0 && (
+                    <span className="ml-2 text-primary">
+                      → {sortedBattleCharacters[activeBattle.currentTurnIndex]?.name}
+                    </span>
+                  )}
+                </p>
+              </div>
               <div className="flex gap-2">
                 <button onClick={() => setShowAddNPC(true)} className="btn-primary text-sm">
                   + Add NPC
@@ -414,9 +430,25 @@ export default function AdminDashboard() {
                     <input
                       type="number"
                       value={char.initiative}
-                      onChange={(e) =>
-                        handleUpdateInitiative(char.id, parseInt(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        // Update local state immediately for responsive UI
+                        const newInitiative = parseInt(e.target.value) || 0;
+                        const updatedCharacters = activeBattle.characters.map(c =>
+                          c.id === char.id ? { ...c, initiative: newInitiative } : c
+                        );
+                        setActiveBattle({ ...activeBattle, characters: updatedCharacters });
+                      }}
+                      onBlur={(e) => {
+                        // Save to database and sort when user leaves the field
+                        handleUpdateInitiative(char.id, parseInt(e.target.value) || 0);
+                      }}
+                      onKeyDown={(e) => {
+                        // Also save when user presses Enter
+                        if (e.key === 'Enter') {
+                          handleUpdateInitiative(char.id, parseInt(e.currentTarget.value) || 0);
+                          e.currentTarget.blur();
+                        }
+                      }}
                       className="w-20 px-2 py-1 bg-gray-700 rounded text-center"
                     />
 

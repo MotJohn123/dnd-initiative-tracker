@@ -24,7 +24,7 @@ interface Battle {
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Home() {
-  const { data, error } = useSWR('/api/battles/active', fetcher, {
+  const { data, error, isLoading } = useSWR('/api/battles/active', fetcher, {
     refreshInterval: 2000, // Poll every 2 seconds
   });
 
@@ -39,6 +39,18 @@ export default function Home() {
         <div className="card max-w-md w-full text-center">
           <h2 className="text-2xl font-bold text-red-500 mb-4">⚠️ Error</h2>
           <p className="text-gray-300">Failed to load battle data</p>
+          <p className="text-sm text-gray-500 mt-2">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="card max-w-md w-full text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <p className="text-gray-300">Loading battle data...</p>
         </div>
       </div>
     );
@@ -64,6 +76,9 @@ export default function Home() {
         <header className="text-center mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold mb-2">⚔️ Initiative Tracker</h1>
           <h2 className="text-xl sm:text-2xl text-primary font-semibold">{battle.name}</h2>
+          <p className="text-gray-400 mt-2">
+            Turn {battle.currentTurnIndex + 1} of {sortedCharacters.length}
+          </p>
         </header>
 
         {sortedCharacters.length === 0 ? (
