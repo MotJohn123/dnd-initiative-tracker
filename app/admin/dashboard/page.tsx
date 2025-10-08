@@ -32,6 +32,8 @@ interface Battle {
   currentTurnIndex: number;
   currentRound: number;
   isActive: boolean;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export default function AdminDashboard() {
@@ -560,6 +562,15 @@ export default function AdminDashboard() {
     router.push('/admin');
   };
 
+  const getBattleDuration = (battle: Battle): string => {
+    const start = new Date(battle.createdAt);
+    const now = new Date();
+    const diffMs = now.getTime() - start.getTime();
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
   const sortedBattleCharacters = activeBattle
     ? [...activeBattle.characters].sort((a, b) => {
         if (b.initiative !== a.initiative) return b.initiative - a.initiative;
@@ -580,8 +591,8 @@ export default function AdminDashboard() {
         {/* Active Battle Section */}
         {activeBattle ? (
           <div className="card mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <div>
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
+              <div className="flex-1">
                 <h2 className="text-2xl font-bold">⚔️ {activeBattle.name}</h2>
                 <p className="text-gray-400 text-sm mt-1">
                   <span className="text-primary font-semibold">Round {activeBattle.currentRound || 1}</span>
@@ -593,24 +604,27 @@ export default function AdminDashboard() {
                     </span>
                   )}
                 </p>
+                <p className="text-yellow-500 text-sm mt-1">
+                  ⏱️ Duration: {getBattleDuration(activeBattle)}
+                </p>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => setShowAddPC(true)} className="btn-primary text-sm">
+              <div className="flex gap-2 flex-wrap justify-center lg:justify-end">
+                <button onClick={() => setShowAddPC(true)} className="btn-primary text-sm whitespace-nowrap">
                   + Add PC
                 </button>
-                <button onClick={() => setShowAddNPC(true)} className="btn-primary text-sm">
+                <button onClick={() => setShowAddNPC(true)} className="btn-primary text-sm whitespace-nowrap">
                   + Add NPC
                 </button>
-                <button onClick={handleAddLair} className="btn-secondary text-sm">
+                <button onClick={handleAddLair} className="btn-secondary text-sm whitespace-nowrap">
                   + Lair (20)
                 </button>
-                <button onClick={handleRefreshExpiration} className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1.5 rounded-lg text-sm">
+                <button onClick={handleRefreshExpiration} className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1.5 rounded-lg text-sm whitespace-nowrap">
                   🕐 +8 Hours
                 </button>
-                <button onClick={handleNextTurn} className="btn-primary text-sm">
+                <button onClick={handleNextTurn} className="btn-primary text-sm whitespace-nowrap">
                   Next Turn →
                 </button>
-                <button onClick={handleEndBattle} className="btn-danger text-sm">
+                <button onClick={handleEndBattle} className="btn-danger text-sm whitespace-nowrap">
                   End Battle
                 </button>
               </div>
