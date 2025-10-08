@@ -18,6 +18,7 @@ export interface IBattle extends Document {
   currentTurnIndex: number;
   currentRound: number; // Track which round we're on
   isActive: boolean;
+  expiresAt: Date; // Auto-end battle after 8 hours
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +83,10 @@ const BattleSchema: Schema = new Schema({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  expiresAt: {
+    type: Date,
+    default: () => new Date(Date.now() + 8 * 60 * 60 * 1000), // 8 hours from now
   },
   createdAt: {
     type: Date,

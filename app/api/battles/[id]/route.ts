@@ -47,6 +47,10 @@ export async function PUT(
     if (updates.name !== undefined) {
       battle.name = updates.name;
     }
+    if (updates.refreshExpiration === true) {
+      // Extend expiration by 8 hours from now
+      battle.expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000);
+    }
 
     await battle.save();
 

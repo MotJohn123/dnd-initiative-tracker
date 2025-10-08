@@ -43,6 +43,7 @@ export default function AdminDashboard() {
   const [showBattleForm, setShowBattleForm] = useState(false);
   const [showAddNPC, setShowAddNPC] = useState(false);
   const [showAddPC, setShowAddPC] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<PlayerGroup | null>(null);
   
   // Form states
   const [groupName, setGroupName] = useState('');
@@ -115,6 +116,61 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to create group:', error);
+    }
+  };
+
+  const handleEditGroup = (group: PlayerGroup) => {
+    setEditingGroup(group);
+    setGroupName(group.name);
+    setCharacters(group.characters.length > 0 ? group.characters : [{ name: '', imageUrl: '' }]);
+    setShowGroupForm(true);
+  };
+
+  const handleUpdateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !editingGroup) return;
+
+    try {
+      const res = await fetch(`/api/groups/${editingGroup._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: groupName,
+          characters: characters.filter(c => c.name.trim()),
+        }),
+      });
+
+      if (res.ok) {
+        setShowGroupForm(false);
+        setEditingGroup(null);
+        setGroupName('');
+        setCharacters([{ name: '', imageUrl: '' }]);
+        loadGroups(token);
+      }
+    } catch (error) {
+      console.error('Failed to update group:', error);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!token || !confirm('Are you sure you want to delete this group?')) return;
+
+    try {
+      const res = await fetch(`/api/groups/${groupId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        loadGroups(token);
+      }
+    } catch (error) {
+      console.error('Failed to delete group:', error);
     }
   };
 
@@ -475,6 +531,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleRefreshExpiration = async () => {
+    if (!token || !activeBattle) return;
+
+    try {
+      const res = await fetch(`/api/battles/${activeBattle._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ refreshExpiration: true }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setActiveBattle(data.battle);
+        alert('Battle extended by 8 hours!');
+      }
+    } catch (error) {
+      console.error('Failed to refresh expiration:', error);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -515,7 +594,7 @@ export default function AdminDashboard() {
                   )}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button onClick={() => setShowAddPC(true)} className="btn-primary text-sm">
                   + Add PC
                 </button>
@@ -524,6 +603,9 @@ export default function AdminDashboard() {
                 </button>
                 <button onClick={handleAddLair} className="btn-secondary text-sm">
                   + Lair (20)
+                </button>
+                <button onClick={handleRefreshExpiration} className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1.5 rounded-lg text-sm">
+                  🕐 +8 Hours
                 </button>
                 <button onClick={handleNextTurn} className="btn-primary text-sm">
                   Next Turn →
@@ -805,7 +887,23 @@ export default function AdminDashboard() {
             ) : (
               groups.map((group) => (
                 <div key={group._id} className="p-4 bg-gray-800/30 rounded-lg border border-gray-700">
-                  <h3 className="font-bold mb-2">{group.name}</h3>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold">{group.name}</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditGroup(group)}
+                        className="text-primary hover:text-primary/80 text-sm"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteGroup(group._id)}
+                        className="text-red-500 hover:text-red-400 text-sm"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
                   <div className="text-sm text-gray-400">
                     {group.characters.length} character(s):{' '}
                     {group.characters.map((c) => c.name).join(', ') || 'None'}
@@ -816,12 +914,14 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Create Group Modal */}
+        {/* Create/Edit Group Modal */}
         {showGroupForm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
             <div className="card max-w-2xl w-full my-8">
-              <h3 className="text-xl font-bold mb-4">Create Player Group</h3>
-              <form onSubmit={handleCreateGroup} className="space-y-4">
+              <h3 className="text-xl font-bold mb-4">
+                {editingGroup ? 'Edit Player Group' : 'Create Player Group'}
+              </h3>
+              <form onSubmit={editingGroup ? handleUpdateGroup : handleCreateGroup} className="space-y-4">
                 <div>
                   <label className="block text-sm mb-2">Group Name</label>
                   <input
@@ -884,12 +984,13 @@ export default function AdminDashboard() {
 
                 <div className="flex gap-2">
                   <button type="submit" className="btn-primary flex-1">
-                    Create Group
+                    {editingGroup ? 'Update Group' : 'Create Group'}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setShowGroupForm(false);
+                      setEditingGroup(null);
                       setGroupName('');
                       setCharacters([{ name: '', imageUrl: '' }]);
                     }}

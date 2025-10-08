@@ -20,17 +20,31 @@ interface Battle {
   characters: Character[];
   currentTurnIndex: number;
   currentRound: number;
+  expiresAt: string;
   updatedAt: string;
+}
+
+interface BattleOption {
+  _id: string;
+  name: string;
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Home() {
-  const { data, error, isLoading } = useSWR('/api/battles/active', fetcher, {
+  const [selectedBattleId, setSelectedBattleId] = useState<string | null>(null);
+  
+  const apiUrl = selectedBattleId 
+    ? `/api/battles/active?id=${selectedBattleId}`
+    : '/api/battles/active';
+    
+  const { data, error, isLoading } = useSWR(apiUrl, fetcher, {
     refreshInterval: 500, // Poll every 0.5 seconds for fast updates
   });
 
   const battle: Battle | null = data?.battle || null;
+  const availableBattles: BattleOption[] = data?.availableBattles || [];
+  
   const sortedCharacters = battle?.characters
     ? [...battle.characters].sort((a, b) => {
         if (b.initiative !== a.initiative) return b.initiative - a.initiative;
@@ -67,9 +81,29 @@ export default function Home() {
         <div className="card max-w-md w-full text-center">
           <div className="text-6xl mb-4">⚔️</div>
           <h1 className="text-3xl font-bold mb-4">D&D Initiative Tracker</h1>
-          <p className="text-gray-300">
-            No active battle. The DM will start one soon!
-          </p>
+          
+          {availableBattles.length > 0 ? (
+            <div>
+              <p className="text-gray-300 mb-4">
+                Select a battle to watch:
+              </p>
+              <div className="space-y-2">
+                {availableBattles.map((b) => (
+                  <button
+                    key={b._id}
+                    onClick={() => setSelectedBattleId(b._id)}
+                    className="btn-primary w-full"
+                  >
+                    📜 {b.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-300">
+              No active battle. The DM will start one soon!
+            </p>
+          )}
         </div>
       </div>
     );
@@ -86,6 +120,22 @@ export default function Home() {
             {' • '}
             Turn {battle.currentTurnIndex + 1} of {sortedCharacters.length}
           </p>
+          
+          {availableBattles.length > 1 && (
+            <div className="mt-4">
+              <select
+                value={selectedBattleId || battle._id}
+                onChange={(e) => setSelectedBattleId(e.target.value)}
+                className="input-field max-w-xs"
+              >
+                {availableBattles.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </header>
 
         {sortedCharacters.length === 0 ? (
