@@ -608,7 +608,36 @@ export default function AdminDashboard() {
                   ⏱️ Duration: {getBattleDuration(activeBattle)}
                 </p>
               </div>
-              <div className="flex gap-2 flex-wrap justify-center lg:justify-end">
+              
+              {/* Mobile: Next Turn as prominent button */}
+              <div className="flex flex-col gap-2 lg:hidden w-full">
+                <button 
+                  onClick={handleNextTurn} 
+                  className="btn-primary text-lg py-3 w-full font-bold whitespace-nowrap"
+                >
+                  Next Turn →
+                </button>
+                <div className="flex gap-2 flex-wrap justify-center">
+                  <button onClick={() => setShowAddPC(true)} className="btn-primary text-sm whitespace-nowrap">
+                    + Add PC
+                  </button>
+                  <button onClick={() => setShowAddNPC(true)} className="btn-primary text-sm whitespace-nowrap">
+                    + Add NPC
+                  </button>
+                  <button onClick={handleAddLair} className="btn-secondary text-sm whitespace-nowrap">
+                    + Lair (20)
+                  </button>
+                  <button onClick={handleRefreshExpiration} className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1.5 rounded-lg text-sm whitespace-nowrap">
+                    🕐 +8 Hours
+                  </button>
+                  <button onClick={handleEndBattle} className="btn-danger text-sm whitespace-nowrap">
+                    End Battle
+                  </button>
+                </div>
+              </div>
+
+              {/* Desktop: All buttons in one row */}
+              <div className="hidden lg:flex gap-2 flex-wrap justify-end">
                 <button onClick={() => setShowAddPC(true)} className="btn-primary text-sm whitespace-nowrap">
                   + Add PC
                 </button>
