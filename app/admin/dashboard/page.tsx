@@ -249,7 +249,21 @@ export default function AdminDashboard() {
       sortOrder: maxSortOrder + 1,
     };
 
+    // Get the current character before sorting changes
+    const sortedBefore = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const currentCharacterId = sortedBefore[activeBattle.currentTurnIndex]?.id;
+
     const updatedCharacters = [...activeBattle.characters, newNPC];
+
+    // Find where the current character will be after adding new NPC
+    const sortedAfter = [...updatedCharacters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const newTurnIndex = sortedAfter.findIndex(c => c.id === currentCharacterId);
 
     try {
       const res = await fetch(`/api/battles/${activeBattle._id}`, {
@@ -258,7 +272,10 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ characters: updatedCharacters }),
+        body: JSON.stringify({ 
+          characters: updatedCharacters,
+          currentTurnIndex: newTurnIndex >= 0 ? newTurnIndex : activeBattle.currentTurnIndex
+        }),
       });
 
       if (res.ok) {
@@ -287,7 +304,21 @@ export default function AdminDashboard() {
       sortOrder: maxSortOrder + 1,
     };
 
+    // Get the current character before sorting changes
+    const sortedBefore = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const currentCharacterId = sortedBefore[activeBattle.currentTurnIndex]?.id;
+
     const updatedCharacters = [...activeBattle.characters, newPC];
+
+    // Find where the current character will be after adding new PC
+    const sortedAfter = [...updatedCharacters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const newTurnIndex = sortedAfter.findIndex(c => c.id === currentCharacterId);
 
     try {
       const res = await fetch(`/api/battles/${activeBattle._id}`, {
@@ -296,7 +327,10 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ characters: updatedCharacters }),
+        body: JSON.stringify({ 
+          characters: updatedCharacters,
+          currentTurnIndex: newTurnIndex >= 0 ? newTurnIndex : activeBattle.currentTurnIndex
+        }),
       });
 
       if (res.ok) {
@@ -350,12 +384,25 @@ export default function AdminDashboard() {
   const handleUpdateInitiative = async (charId: string, initiative: number) => {
     if (!token || !activeBattle) return;
 
+    // Get the current character before sorting changes
+    const sortedBefore = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const currentCharacterId = sortedBefore[activeBattle.currentTurnIndex]?.id;
+
     const updatedCharacters = activeBattle.characters.map(char =>
       char.id === charId ? { ...char, initiative } : char
     );
 
     // Sort characters by initiative after update
-    const sortedCharacters = updatedCharacters.sort((a, b) => b.initiative - a.initiative);
+    const sortedCharacters = updatedCharacters.sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+
+    // Find where the current character is after sorting
+    const newTurnIndex = sortedCharacters.findIndex(c => c.id === currentCharacterId);
 
     try {
       const res = await fetch(`/api/battles/${activeBattle._id}`, {
@@ -366,7 +413,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({ 
           characters: sortedCharacters,
-          currentTurnIndex: 0 // Reset to first character after re-sorting
+          currentTurnIndex: newTurnIndex >= 0 ? newTurnIndex : 0
         }),
       });
 
@@ -408,7 +455,58 @@ export default function AdminDashboard() {
   const handleRemoveCharacter = async (charId: string) => {
     if (!token || !activeBattle) return;
 
+    // Get the current character before removing
+    const sortedBefore = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const currentCharacterId = sortedBefore[activeBattle.currentTurnIndex]?.id;
+
+    // If we're removing the current character, move to next turn
     const updatedCharacters = activeBattle.characters.filter(char => char.id !== charId);
+    
+    if (updatedCharacters.length === 0) {
+      // If no characters left, just remove and set index to 0
+      try {
+        const res = await fetch(`/api/battles/${activeBattle._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ 
+            characters: updatedCharacters,
+            currentTurnIndex: 0
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setActiveBattle(data.battle);
+        }
+      } catch (error) {
+        console.error('Failed to remove character:', error);
+      }
+      return;
+    }
+
+    // Sort characters after removal
+    const sortedAfter = [...updatedCharacters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+
+    let newTurnIndex;
+    if (charId === currentCharacterId) {
+      // If removing current character, stay at same index (effectively moves to next character)
+      newTurnIndex = activeBattle.currentTurnIndex >= sortedAfter.length 
+        ? 0 
+        : activeBattle.currentTurnIndex;
+    } else {
+      // Find where the current character is after removal
+      newTurnIndex = sortedAfter.findIndex(c => c.id === currentCharacterId);
+      if (newTurnIndex < 0) newTurnIndex = 0;
+    }
 
     try {
       const res = await fetch(`/api/battles/${activeBattle._id}`, {
@@ -417,7 +515,10 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ characters: updatedCharacters }),
+        body: JSON.stringify({ 
+          characters: updatedCharacters,
+          currentTurnIndex: newTurnIndex
+        }),
       });
 
       if (res.ok) {
