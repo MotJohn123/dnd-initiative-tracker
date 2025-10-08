@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const [showBattleForm, setShowBattleForm] = useState(false);
   const [showAddNPC, setShowAddNPC] = useState(false);
   const [showAddPC, setShowAddPC] = useState(false);
+  const [showAddGroup, setShowAddGroup] = useState(false);
   const [editingGroup, setEditingGroup] = useState<PlayerGroup | null>(null);
   
   // Form states
@@ -56,6 +57,7 @@ export default function AdminDashboard() {
   const [npcInitiative, setNpcInitiative] = useState(10);
   const [pcName, setPcName] = useState('');
   const [pcInitiative, setPcInitiative] = useState(10);
+  const [addGroupId, setAddGroupId] = useState('');
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -342,6 +344,65 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to add PC:', error);
+    }
+  };
+
+  const handleAddGroupToBattle = async () => {
+    if (!token || !activeBattle || !addGroupId) return;
+
+    const selectedGroup = groups.find(g => g._id === addGroupId);
+    if (!selectedGroup) return;
+
+    // Get the current character before adding group
+    const sortedBefore = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const currentCharacterId = sortedBefore[activeBattle.currentTurnIndex]?.id;
+
+    const maxSortOrder = Math.max(...activeBattle.characters.map(c => c.sortOrder || 0), 0);
+
+    // Add all characters from the group
+    const newCharacters = selectedGroup.characters.map((char, idx) => ({
+      id: `pc-group-${Date.now()}-${idx}`,
+      name: char.name,
+      isNPC: false,
+      isRevealed: true,
+      initiative: 0,
+      imageUrl: char.imageUrl,
+      sortOrder: maxSortOrder + idx + 1,
+    }));
+
+    const updatedCharacters = [...activeBattle.characters, ...newCharacters];
+
+    // Find where the current character will be after adding group
+    const sortedAfter = [...updatedCharacters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    const newTurnIndex = sortedAfter.findIndex(c => c.id === currentCharacterId);
+
+    try {
+      const res = await fetch(`/api/battles/${activeBattle._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          characters: updatedCharacters,
+          currentTurnIndex: newTurnIndex >= 0 ? newTurnIndex : activeBattle.currentTurnIndex
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setActiveBattle(data.battle);
+        setShowAddGroup(false);
+        setAddGroupId('');
+      }
+    } catch (error) {
+      console.error('Failed to add group to battle:', error);
     }
   };
 
@@ -725,6 +786,9 @@ export default function AdminDashboard() {
                   <button onClick={() => setShowAddNPC(true)} className="btn-primary text-sm whitespace-nowrap">
                     + Add NPC
                   </button>
+                  <button onClick={() => setShowAddGroup(true)} className="btn-primary text-sm whitespace-nowrap">
+                    + Add Group
+                  </button>
                   <button onClick={handleAddLair} className="btn-secondary text-sm whitespace-nowrap">
                     + Lair (20)
                   </button>
@@ -744,6 +808,9 @@ export default function AdminDashboard() {
                 </button>
                 <button onClick={() => setShowAddNPC(true)} className="btn-primary text-sm whitespace-nowrap">
                   + Add NPC
+                </button>
+                <button onClick={() => setShowAddGroup(true)} className="btn-primary text-sm whitespace-nowrap">
+                  + Add Group
                 </button>
                 <button onClick={handleAddLair} className="btn-secondary text-sm whitespace-nowrap">
                   + Lair (20)
@@ -949,6 +1016,53 @@ export default function AdminDashboard() {
                   </button>
                   <button
                     onClick={() => setShowAddPC(false)}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Group Modal */}
+        {showAddGroup && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="card max-w-md w-full">
+              <h3 className="text-xl font-bold mb-4">Add Player Group to Battle</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-2">Select Group</label>
+                  <select
+                    value={addGroupId}
+                    onChange={(e) => setAddGroupId(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">Choose a group...</option>
+                    {groups.map((group) => (
+                      <option key={group._id} value={group._id}>
+                        {group.name} ({group.characters.length} characters)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-2">
+                    All characters from the group will be added with initiative 0. You can set their initiative after adding.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleAddGroupToBattle} 
+                    className="btn-primary flex-1"
+                    disabled={!addGroupId}
+                  >
+                    Add Group
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAddGroup(false);
+                      setAddGroupId('');
+                    }}
                     className="btn-secondary flex-1"
                   >
                     Cancel
