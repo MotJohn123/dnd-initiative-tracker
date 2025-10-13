@@ -1014,36 +1014,36 @@ export default function AdminDashboard() {
               })}
             </div>
 
-            {/* Sticky Next Turn Bar - appears when scrolling on mobile */}
-            <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-gray-700 p-4 z-40 lg:hidden">
-              <div className="max-w-6xl mx-auto flex gap-2">
-                <button 
-                  onClick={handlePreviousTurn} 
-                  className="btn-secondary py-3 font-bold whitespace-nowrap flex-1"
-                >
-                  ← Back
-                </button>
-                <button 
-                  onClick={handleNextTurn} 
-                  className="btn-primary py-3 font-bold whitespace-nowrap flex-[2]"
-                >
-                  Next Turn →
-                </button>
-              </div>
-              <div className="max-w-6xl mx-auto mt-2 text-center text-sm text-gray-400">
-                <span className="text-primary font-semibold">Round {activeBattle.currentRound || 1}</span>
-                {' • '}
-                Turn {activeBattle.currentTurnIndex + 1} of {sortedBattleCharacters.length}
+            {/* Floating Action Buttons - always visible on scroll */}
+            <div className="fixed right-4 bottom-4 flex flex-col gap-2 z-50">
+              <button 
+                onClick={handleNextTurn} 
+                className="btn-primary text-lg py-4 px-6 rounded-full shadow-2xl font-bold whitespace-nowrap hover:scale-105 transition-transform"
+                title="Next Turn"
+              >
+                Next Turn →
+              </button>
+              <button 
+                onClick={handlePreviousTurn} 
+                className="btn-secondary text-sm py-3 px-4 rounded-full shadow-2xl font-bold whitespace-nowrap hover:scale-105 transition-transform"
+                title="Previous Turn"
+              >
+                ← Back
+              </button>
+              
+              {/* Current turn info tooltip */}
+              <div className="bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-2xl p-3 text-sm border border-gray-700">
+                <div className="text-primary font-semibold">Round {activeBattle.currentRound || 1}</div>
+                <div className="text-gray-400">
+                  Turn {activeBattle.currentTurnIndex + 1}/{sortedBattleCharacters.length}
+                </div>
                 {sortedBattleCharacters.length > 0 && (
-                  <span className="ml-2 text-white">
-                    → {sortedBattleCharacters[activeBattle.currentTurnIndex]?.name}
-                  </span>
+                  <div className="text-white font-semibold mt-1 truncate max-w-[150px]">
+                    {sortedBattleCharacters[activeBattle.currentTurnIndex]?.name}
+                  </div>
                 )}
               </div>
             </div>
-
-            {/* Spacer for sticky button on mobile */}
-            <div className="h-32 lg:hidden"></div>
           </div>
         ) : (
           <div className="card mb-8 text-center">
