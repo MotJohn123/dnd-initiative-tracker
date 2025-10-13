@@ -1013,18 +1013,6 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
-
-            {/* Floating Next Turn Button - fixed to window viewport */}
-            <div className="fixed bottom-6 right-6 z-50">
-              <button 
-                onClick={handleNextTurn} 
-                className="btn-primary text-xl py-5 px-8 rounded-full shadow-2xl font-bold hover:scale-110 transition-all flex items-center gap-2"
-                title={`Next Turn - Round ${activeBattle.currentRound || 1}, Turn ${activeBattle.currentTurnIndex + 1}`}
-              >
-                <span>Next Turn</span>
-                <span className="text-2xl">→</span>
-              </button>
-            </div>
           </div>
         ) : (
           <div className="card mb-8 text-center">
@@ -1356,6 +1344,20 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Floating Next Turn Button - fixed to window viewport, outside all containers */}
+      {activeBattle && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <button 
+            onClick={handleNextTurn} 
+            className="btn-primary text-xl py-5 px-8 rounded-full shadow-2xl font-bold hover:scale-110 transition-all flex items-center gap-2"
+            title={`Next Turn - Round ${activeBattle.currentRound || 1}, Turn ${activeBattle.currentTurnIndex + 1}`}
+          >
+            <span>Next Turn</span>
+            <span className="text-2xl">→</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
