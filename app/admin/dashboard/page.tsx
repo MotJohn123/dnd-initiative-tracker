@@ -1014,35 +1014,16 @@ export default function AdminDashboard() {
               })}
             </div>
 
-            {/* Floating Action Buttons - always visible on scroll */}
-            <div className="fixed right-4 bottom-4 flex flex-col gap-2 z-50">
+            {/* Floating Next Turn Button - fixed to window viewport */}
+            <div className="fixed bottom-6 right-6 z-50">
               <button 
                 onClick={handleNextTurn} 
-                className="btn-primary text-lg py-4 px-6 rounded-full shadow-2xl font-bold whitespace-nowrap hover:scale-105 transition-transform"
-                title="Next Turn"
+                className="btn-primary text-xl py-5 px-8 rounded-full shadow-2xl font-bold hover:scale-110 transition-all flex items-center gap-2"
+                title={`Next Turn - Round ${activeBattle.currentRound || 1}, Turn ${activeBattle.currentTurnIndex + 1}`}
               >
-                Next Turn →
+                <span>Next Turn</span>
+                <span className="text-2xl">→</span>
               </button>
-              <button 
-                onClick={handlePreviousTurn} 
-                className="btn-secondary text-sm py-3 px-4 rounded-full shadow-2xl font-bold whitespace-nowrap hover:scale-105 transition-transform"
-                title="Previous Turn"
-              >
-                ← Back
-              </button>
-              
-              {/* Current turn info tooltip */}
-              <div className="bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-2xl p-3 text-sm border border-gray-700">
-                <div className="text-primary font-semibold">Round {activeBattle.currentRound || 1}</div>
-                <div className="text-gray-400">
-                  Turn {activeBattle.currentTurnIndex + 1}/{sortedBattleCharacters.length}
-                </div>
-                {sortedBattleCharacters.length > 0 && (
-                  <div className="text-white font-semibold mt-1 truncate max-w-[150px]">
-                    {sortedBattleCharacters[activeBattle.currentTurnIndex]?.name}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         ) : (
