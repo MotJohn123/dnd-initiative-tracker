@@ -624,6 +624,71 @@ export default function AdminDashboard() {
     }
   };
 
+  const handlePreviousTurn = async () => {
+    if (!token || !activeBattle) return;
+
+    const sortedCharacters = [...activeBattle.characters].sort((a, b) => {
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+    
+    const newIndex = activeBattle.currentTurnIndex === 0 
+      ? sortedCharacters.length - 1 
+      : activeBattle.currentTurnIndex - 1;
+    
+    const newRound = activeBattle.currentTurnIndex === 0 
+      ? Math.max((activeBattle.currentRound || 1) - 1, 1)
+      : (activeBattle.currentRound || 1);
+
+    try {
+      const res = await fetch(`/api/battles/${activeBattle._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          currentTurnIndex: newIndex,
+          currentRound: newRound
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setActiveBattle(data.battle);
+      }
+    } catch (error) {
+      console.error('Failed to go back:', error);
+    }
+  };
+
+  const handleResetBattle = async () => {
+    if (!token || !activeBattle) return;
+    
+    if (!confirm('Reset battle to Round 1, Turn 1? This cannot be undone.')) return;
+
+    try {
+      const res = await fetch(`/api/battles/${activeBattle._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          currentTurnIndex: 0,
+          currentRound: 1
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setActiveBattle(data.battle);
+      }
+    } catch (error) {
+      console.error('Failed to reset battle:', error);
+    }
+  };
+
   const handleMoveCharacter = async (charId: string, direction: 'up' | 'down') => {
     if (!token || !activeBattle) return;
 
@@ -773,12 +838,20 @@ export default function AdminDashboard() {
               
               {/* Mobile: Next Turn as prominent button */}
               <div className="flex flex-col gap-2 lg:hidden w-full">
-                <button 
-                  onClick={handleNextTurn} 
-                  className="btn-primary text-lg py-3 w-full font-bold whitespace-nowrap"
-                >
-                  Next Turn →
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handlePreviousTurn} 
+                    className="btn-secondary text-lg py-3 font-bold whitespace-nowrap flex-1"
+                  >
+                    ← Back
+                  </button>
+                  <button 
+                    onClick={handleNextTurn} 
+                    className="btn-primary text-lg py-3 font-bold whitespace-nowrap flex-[2]"
+                  >
+                    Next Turn →
+                  </button>
+                </div>
                 <div className="flex gap-2 flex-wrap justify-center">
                   <button onClick={() => setShowAddPC(true)} className="btn-primary text-sm whitespace-nowrap">
                     + Add PC
@@ -791,6 +864,9 @@ export default function AdminDashboard() {
                   </button>
                   <button onClick={handleAddLair} className="btn-secondary text-sm whitespace-nowrap">
                     + Lair (20)
+                  </button>
+                  <button onClick={handleResetBattle} className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-lg text-sm whitespace-nowrap">
+                    🔄 Reset
                   </button>
                   <button onClick={handleRefreshExpiration} className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1.5 rounded-lg text-sm whitespace-nowrap">
                     🕐 +8 Hours
@@ -815,8 +891,14 @@ export default function AdminDashboard() {
                 <button onClick={handleAddLair} className="btn-secondary text-sm whitespace-nowrap">
                   + Lair (20)
                 </button>
+                <button onClick={handleResetBattle} className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-lg text-sm whitespace-nowrap">
+                  🔄 Reset
+                </button>
                 <button onClick={handleRefreshExpiration} className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1.5 rounded-lg text-sm whitespace-nowrap">
                   🕐 +8 Hours
+                </button>
+                <button onClick={handlePreviousTurn} className="btn-secondary text-sm whitespace-nowrap">
+                  ← Back
                 </button>
                 <button onClick={handleNextTurn} className="btn-primary text-sm whitespace-nowrap">
                   Next Turn →
@@ -931,6 +1013,37 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
+
+            {/* Sticky Next Turn Bar - appears when scrolling on mobile */}
+            <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-gray-700 p-4 z-40 lg:hidden">
+              <div className="max-w-6xl mx-auto flex gap-2">
+                <button 
+                  onClick={handlePreviousTurn} 
+                  className="btn-secondary py-3 font-bold whitespace-nowrap flex-1"
+                >
+                  ← Back
+                </button>
+                <button 
+                  onClick={handleNextTurn} 
+                  className="btn-primary py-3 font-bold whitespace-nowrap flex-[2]"
+                >
+                  Next Turn →
+                </button>
+              </div>
+              <div className="max-w-6xl mx-auto mt-2 text-center text-sm text-gray-400">
+                <span className="text-primary font-semibold">Round {activeBattle.currentRound || 1}</span>
+                {' • '}
+                Turn {activeBattle.currentTurnIndex + 1} of {sortedBattleCharacters.length}
+                {sortedBattleCharacters.length > 0 && (
+                  <span className="ml-2 text-white">
+                    → {sortedBattleCharacters[activeBattle.currentTurnIndex]?.name}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Spacer for sticky button on mobile */}
+            <div className="h-32 lg:hidden"></div>
           </div>
         ) : (
           <div className="card mb-8 text-center">
