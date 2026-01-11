@@ -87,18 +87,15 @@ export default function FullscreenTracker() {
   const availableHeight = dimensions.height - headerHeight - footerHeight - 40;
   const availableWidth = dimensions.width - 32;
 
-  // Calculate optimal card size
-  const columns = Math.max(1, Math.min(4, Math.ceil(Math.sqrt(characterCount * (availableWidth / availableHeight)))));
-  const rows = Math.ceil(characterCount / columns);
-  const cardWidth = Math.floor(availableWidth / columns) - 12;
-  const cardHeight = Math.floor(availableHeight / rows) - 12;
+  // Single column layout - one character per row
+  const cardHeight = Math.floor(availableHeight / characterCount) - 8;
 
   // Dynamic font sizes based on card dimensions
-  const baseFontSize = Math.min(cardWidth / 10, cardHeight / 5, 24);
-  const nameFontSize = Math.max(baseFontSize * 1.2, 14);
-  const initiativeFontSize = Math.max(baseFontSize * 2, 20);
-  const smallFontSize = Math.max(baseFontSize * 0.7, 10);
-  const avatarSize = Math.min(cardHeight * 0.5, cardWidth * 0.25, 80);
+  const baseFontSize = Math.min(availableWidth / 20, cardHeight / 3, 32);
+  const nameFontSize = Math.max(baseFontSize * 1.2, 16);
+  const initiativeFontSize = Math.max(baseFontSize * 2, 24);
+  const smallFontSize = Math.max(baseFontSize * 0.7, 12);
+  const avatarSize = Math.min(cardHeight * 0.8, 100);
 
   if (error) {
     return (
@@ -217,11 +214,7 @@ export default function FullscreenTracker() {
           </div>
         ) : (
           <div
-            className="h-full w-full grid gap-3"
-            style={{
-              gridTemplateColumns: `repeat(${columns}, 1fr)`,
-              gridTemplateRows: `repeat(${rows}, 1fr)`,
-            }}
+            className="h-full w-full flex flex-col gap-2"
           >
             {sortedCharacters.map((character, index) => {
               const isCurrentTurn = index === battle.currentTurnIndex;
@@ -239,7 +232,8 @@ export default function FullscreenTracker() {
                     }
                   `}
                   style={{
-                    padding: Math.max(cardHeight * 0.08, 8),
+                    height: cardHeight,
+                    padding: Math.max(cardHeight * 0.1, 8),
                   }}
                 >
                   {/* Avatar */}
