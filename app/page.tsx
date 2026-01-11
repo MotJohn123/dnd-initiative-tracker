@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
+import Link from 'next/link';
 
 interface Character {
   id: string;
@@ -104,6 +105,13 @@ export default function Home() {
               No active battle. The DM will start one soon!
             </p>
           )}
+          
+          <Link 
+            href="/fullscreen" 
+            className="inline-block mt-6 btn-secondary"
+          >
+            🖥️ Try Fullscreen View
+          </Link>
         </div>
       </div>
     );
@@ -191,6 +199,12 @@ export default function Home() {
 
         <footer className="mt-8 text-center text-gray-400 text-sm">
           <p>Player View • Updates automatically</p>
+          <Link 
+            href="/fullscreen" 
+            className="inline-block mt-4 btn-secondary"
+          >
+            🖥️ Fullscreen Responsive View
+          </Link>
         </footer>
       </div>
     </div>
