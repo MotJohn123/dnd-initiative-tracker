@@ -47,6 +47,8 @@ export default function AdminDashboard() {
   const [showAddPC, setShowAddPC] = useState(false);
   const [showAddGroup, setShowAddGroup] = useState(false);
   const [editingGroup, setEditingGroup] = useState<PlayerGroup | null>(null);
+  const [showEncounterPanel, setShowEncounterPanel] = useState(false);
+  const [encounterPanelWidth, setEncounterPanelWidth] = useState(50); // percentage
   
   // Form states
   const [groupName, setGroupName] = useState('');
@@ -805,15 +807,53 @@ export default function AdminDashboard() {
       })
     : [];
 
+  const handleToggleEncounterPanel = () => {
+    setShowEncounterPanel(!showEncounterPanel);
+  };
+
+  const handleOpenEncounterNewWindow = () => {
+    window.open('/dnd-encounters/index.html', 'encounter-manager', 'width=1200,height=800');
+  };
+
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">🎲 DM Dashboard</h1>
-          <button onClick={handleLogout} className="btn-secondary">
-            Logout
-          </button>
-        </header>
+    <div className="min-h-screen flex">
+      {/* Main Dashboard Panel */}
+      <div 
+        className={`${showEncounterPanel ? '' : 'w-full'} transition-all duration-300 overflow-auto`}
+        style={{ width: showEncounterPanel ? `${100 - encounterPanelWidth}%` : '100%' }}
+      >
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="max-w-6xl mx-auto">
+            <header className="flex justify-between items-center mb-8">
+              <h1 className="text-4xl font-bold">🎲 DM Dashboard</h1>
+              <div className="flex gap-2 items-center">
+                {activeBattle && (
+                  <>
+                    <button 
+                      onClick={handleToggleEncounterPanel}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        showEncounterPanel 
+                          ? 'bg-primary text-black' 
+                          : 'bg-purple-600 hover:bg-purple-700 text-white'
+                      }`}
+                      title="Toggle NPC Manager Panel"
+                    >
+                      {showEncounterPanel ? '✕ Close NPC Panel' : '🐉 NPC Manager'}
+                    </button>
+                    <button 
+                      onClick={handleOpenEncounterNewWindow}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      title="Open NPC Manager in new window"
+                    >
+                      ↗️ New Window
+                    </button>
+                  </>
+                )}
+                <button onClick={handleLogout} className="btn-secondary">
+                  Logout
+                </button>
+              </div>
+            </header>
 
         {/* Active Battle Section */}
         {activeBattle ? (
@@ -1343,11 +1383,79 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
+
+      {/* Encounter Manager Panel - Split Screen */}
+      {showEncounterPanel && (
+        <div 
+          className="border-l-4 border-primary bg-[#1a1a2e] relative"
+          style={{ width: `${encounterPanelWidth}%` }}
+        >
+          {/* Resize Handle */}
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 transition-colors z-10"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const startX = e.clientX;
+              const startWidth = encounterPanelWidth;
+              
+              const handleMouseMove = (moveEvent: MouseEvent) => {
+                const deltaX = startX - moveEvent.clientX;
+                const containerWidth = window.innerWidth;
+                const deltaPercent = (deltaX / containerWidth) * 100;
+                const newWidth = Math.min(Math.max(startWidth + deltaPercent, 20), 80);
+                setEncounterPanelWidth(newWidth);
+              };
+              
+              const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+              };
+              
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
+            }}
+          />
+          
+          {/* Panel Header */}
+          <div className="bg-[#252542] p-3 flex justify-between items-center border-b border-[#3a3a5a]">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🐉</span>
+              <span className="font-bold text-[#c9a227]">NPC Manager</span>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={handleOpenEncounterNewWindow}
+                className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700"
+                title="Open in new window"
+              >
+                ↗️
+              </button>
+              <button 
+                onClick={() => setShowEncounterPanel(false)}
+                className="text-gray-400 hover:text-white text-lg px-2 py-1 rounded hover:bg-gray-700"
+                title="Close panel"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          
+          {/* Iframe Content */}
+          <iframe
+            src="/dnd-encounters/index.html"
+            className="w-full border-none"
+            style={{ height: 'calc(100vh - 52px)' }}
+            title="D&D Encounter Manager"
+          />
+        </div>
+      )}
 
       {/* Floating Next Turn Button - fixed to window viewport, outside all containers */}
       {activeBattle && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className={`fixed bottom-6 z-50 ${showEncounterPanel ? 'left-1/4' : 'right-6'}`} style={showEncounterPanel ? { right: `${encounterPanelWidth / 2 + (100 - encounterPanelWidth)}%`, left: 'auto', transform: 'translateX(50%)' } : {}}>
           <button 
             onClick={handleNextTurn} 
             className="btn-primary text-xl py-5 px-8 rounded-full shadow-2xl font-bold hover:scale-110 transition-all flex items-center gap-2"

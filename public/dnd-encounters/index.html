@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Encounter Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Embedded/Compact mode styles */
+        .embedded-mode .app-header {
+            padding: 15px 0;
+        }
+        .embedded-mode .app-header h1 {
+            font-size: 1.5rem;
+        }
+        .embedded-mode .app-header p {
+            display: none;
+        }
+        .embedded-mode .app-container {
+            padding: 10px;
+        }
+        .embedded-mode .main-nav {
+            margin-bottom: 15px;
+        }
+        .embedded-mode .nav-btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+    </style>
+    <script>
+        // Check if running in embedded mode (iframe or URL param)
+        if (window.self !== window.top || new URLSearchParams(window.location.search).has('embedded')) {
+            document.documentElement.classList.add('embedded-mode');
+        }
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1><i class="fas fa-dragon"></i> D&D Encounter Manager</h1>
+            <p>Track your encounters with 5eTools integration</p>
+        </header>
+
+        <!-- Main Navigation -->
+        <nav class="main-nav">
+            <button class="nav-btn active" data-view="encounters">
+                <i class="fas fa-swords"></i> Encounters
+            </button>
+            <button class="nav-btn" data-view="import">
+                <i class="fas fa-file-import"></i> Import from 5eTools
+            </button>
+        </nav>
+
+        <!-- Encounters List View -->
+        <section id="encounters-view" class="view active">
+            <div class="section-header">
+                <h2>Your Encounters</h2>
+                <button class="btn btn-primary" id="create-encounter-btn">
+                    <i class="fas fa-plus"></i> New Encounter
+                </button>
+            </div>
+            <div id="encounters-list" class="encounters-grid">
+                <!-- Encounters will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Import View -->
+        <section id="import-view" class="view">
+            <div class="section-header">
+                <h2>Import Creatures from 5eTools</h2>
+            </div>
+            <div class="import-container">
+                <div class="import-instructions">
+                    <h3><i class="fas fa-info-circle"></i> How to Import</h3>
+                    <ol>
+                        <li>Go to 5eTools Bestiary</li>
+                        <li>Select creatures and export as CSV</li>
+                        <li>Upload the file or paste the CSV data below</li>
+                    </ol>
+                </div>
+                <div class="file-upload-area">
+                    <input type="file" id="csv-file-input" accept=".csv,.txt" hidden>
+                    <button class="btn btn-primary btn-upload" id="upload-csv-btn">
+                        <i class="fas fa-upload"></i> Upload CSV File
+                    </button>
+                    <span class="file-name" id="selected-file-name">No file selected</span>
+                </div>
+                <div class="separator">or paste CSV data below</div>
+                <textarea id="csv-input" placeholder="Paste your 5eTools CSV data here..."></textarea>
+                <div class="import-actions">
+                    <button class="btn btn-primary" id="parse-csv-btn">
+                        <i class="fas fa-cog"></i> Parse CSV
+                    </button>
+                    <button class="btn btn-secondary" id="clear-csv-btn">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+                <div id="parsed-creatures" class="parsed-creatures-list">
+                    <!-- Parsed creatures will appear here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Active Encounter View -->
+        <section id="encounter-view" class="view">
+            <div class="encounter-header">
+                <button class="btn btn-back" id="back-to-encounters">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <h2 id="encounter-title">Encounter Name</h2>
+                <div class="encounter-actions">
+                    <button class="btn btn-secondary" id="add-npc-btn">
+                        <i class="fas fa-plus"></i> Add NPC
+                    </button>
+                    <button class="btn btn-danger" id="delete-encounter-btn">
+                        <i class="fas fa-trash"></i> Delete Encounter
+                    </button>
+                </div>
+            </div>
+            <div id="npcs-container" class="npcs-grid">
+                <!-- NPCs will be rendered here -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal: Create Encounter -->
+    <div id="create-encounter-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Encounter</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="encounter-name">Encounter Name</label>
+                    <input type="text" id="encounter-name" placeholder="e.g., Goblin Ambush">
+                </div>
+                <div class="form-group">
+                    <label for="encounter-description">Description (optional)</label>
+                    <textarea id="encounter-description" placeholder="Brief description..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="confirm-create-encounter">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add/Edit NPC -->
+    <div id="npc-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="npc-modal-title">Add NPC</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-tabs">
+                    <button class="form-tab active" data-tab="basic">Basic Info</button>
+                    <button class="form-tab" data-tab="abilities">Abilities</button>
+                    <button class="form-tab" data-tab="actions">Actions</button>
+                    <button class="form-tab" data-tab="spells">Spellcasting</button>
+                    <button class="form-tab" data-tab="legendary">Legendary</button>
+                </div>
+                
+                <!-- Basic Info Tab -->
+                <div class="form-tab-content active" data-tab="basic">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="npc-name">Name *</label>
+                            <input type="text" id="npc-name" placeholder="e.g., Goblin">
+                        </div>
+                        <div class="form-group">
+                            <label for="npc-copies">Number of Copies</label>
+                            <input type="number" id="npc-copies" value="1" min="1" max="20">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="npc-hp">Hit Points *</label>
+                            <input type="text" id="npc-hp" placeholder="e.g., 45 or 45 (7d8 + 14)">
+                        </div>
+                        <div class="form-group">
+                            <label for="npc-ac">Armor Class *</label>
+                            <input type="text" id="npc-ac" placeholder="e.g., 15 or 15 (natural armor)">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="npc-size">Size</label>
+                            <select id="npc-size">
+                                <option value="Tiny">Tiny</option>
+                                <option value="Small">Small</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Large">Large</option>
+                                <option value="Huge">Huge</option>
+                                <option value="Gargantuan">Gargantuan</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="npc-type">Type</label>
+                            <input type="text" id="npc-type" placeholder="e.g., Dragon, Humanoid">
+                        </div>
+                        <div class="form-group">
+                            <label for="npc-cr">CR</label>
+                            <input type="text" id="npc-cr" placeholder="e.g., 5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-speed">Speed</label>
+                        <input type="text" id="npc-speed" placeholder="e.g., 30 ft., fly 60 ft.">
+                    </div>
+                    <div class="form-row stats-row">
+                        <div class="form-group stat-input">
+                            <label>STR</label>
+                            <input type="number" id="npc-str" value="10">
+                        </div>
+                        <div class="form-group stat-input">
+                            <label>DEX</label>
+                            <input type="number" id="npc-dex" value="10">
+                        </div>
+                        <div class="form-group stat-input">
+                            <label>CON</label>
+                            <input type="number" id="npc-con" value="10">
+                        </div>
+                        <div class="form-group stat-input">
+                            <label>INT</label>
+                            <input type="number" id="npc-int" value="10">
+                        </div>
+                        <div class="form-group stat-input">
+                            <label>WIS</label>
+                            <input type="number" id="npc-wis" value="10">
+                        </div>
+                        <div class="form-group stat-input">
+                            <label>CHA</label>
+                            <input type="number" id="npc-cha" value="10">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-senses">Senses</label>
+                        <input type="text" id="npc-senses" placeholder="e.g., Darkvision 60 ft.">
+                    </div>
+                </div>
+
+                <!-- Abilities Tab -->
+                <div class="form-tab-content" data-tab="abilities">
+                    <div class="form-group">
+                        <label for="npc-saving-throws">Saving Throws</label>
+                        <input type="text" id="npc-saving-throws" placeholder="e.g., Dex +5, Con +11">
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-skills">Skills</label>
+                        <input type="text" id="npc-skills" placeholder="e.g., Perception +11, Stealth +5">
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-resistances">Damage Resistances</label>
+                        <input type="text" id="npc-resistances" placeholder="e.g., fire, cold">
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-immunities">Damage Immunities</label>
+                        <input type="text" id="npc-immunities" placeholder="e.g., poison, acid">
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-condition-immunities">Condition Immunities</label>
+                        <input type="text" id="npc-condition-immunities" placeholder="e.g., frightened, charmed">
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-traits">Traits</label>
+                        <textarea id="npc-traits" rows="4" placeholder="e.g., Amphibious. The dragon can breathe air and water."></textarea>
+                    </div>
+                </div>
+
+                <!-- Actions Tab -->
+                <div class="form-tab-content" data-tab="actions">
+                    <div class="form-group">
+                        <label for="npc-actions">Actions</label>
+                        <textarea id="npc-actions" rows="6" placeholder="e.g., Multiattack. The dragon makes three attacks..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-bonus-actions">Bonus Actions</label>
+                        <textarea id="npc-bonus-actions" rows="3" placeholder="Bonus actions..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-reactions">Reactions</label>
+                        <textarea id="npc-reactions" rows="3" placeholder="Reactions..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Recharge Abilities</label>
+                        <div id="recharge-abilities-list" class="dynamic-list">
+                            <!-- Recharge abilities will be added here -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" id="add-recharge-ability">
+                            <i class="fas fa-plus"></i> Add Recharge Ability
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label>Limited Use Abilities</label>
+                        <div id="limited-abilities-list" class="dynamic-list">
+                            <!-- Limited use abilities will be added here -->
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" id="add-limited-ability">
+                            <i class="fas fa-plus"></i> Add Limited Use Ability
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Spellcasting Tab -->
+                <div class="form-tab-content" data-tab="spells">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="npc-is-spellcaster"> Is Spellcaster
+                        </label>
+                    </div>
+                    <div id="spellcasting-options" class="hidden">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="npc-spell-dc">Spell Save DC</label>
+                                <input type="number" id="npc-spell-dc" value="13">
+                            </div>
+                            <div class="form-group">
+                                <label for="npc-spell-attack">Spell Attack Bonus</label>
+                                <input type="number" id="npc-spell-attack" value="5">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Spell Slots</label>
+                            <div class="spell-slots-grid">
+                                <div class="spell-slot-input">
+                                    <label>1st</label>
+                                    <input type="number" id="spell-slot-1" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>2nd</label>
+                                    <input type="number" id="spell-slot-2" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>3rd</label>
+                                    <input type="number" id="spell-slot-3" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>4th</label>
+                                    <input type="number" id="spell-slot-4" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>5th</label>
+                                    <input type="number" id="spell-slot-5" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>6th</label>
+                                    <input type="number" id="spell-slot-6" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>7th</label>
+                                    <input type="number" id="spell-slot-7" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>8th</label>
+                                    <input type="number" id="spell-slot-8" value="0" min="0">
+                                </div>
+                                <div class="spell-slot-input">
+                                    <label>9th</label>
+                                    <input type="number" id="spell-slot-9" value="0" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="npc-spells">Known Spells</label>
+                            <textarea id="npc-spells" rows="4" placeholder="List spells here..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legendary Tab -->
+                <div class="form-tab-content" data-tab="legendary">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="npc-has-legendary"> Has Legendary Actions
+                        </label>
+                    </div>
+                    <div id="legendary-options" class="hidden">
+                        <div class="form-group">
+                            <label for="npc-legendary-actions-count">Legendary Actions per Round</label>
+                            <input type="number" id="npc-legendary-actions-count" value="3" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="npc-legendary-actions">Legendary Actions Description</label>
+                            <textarea id="npc-legendary-actions" rows="4" placeholder="Describe legendary actions..."></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="npc-has-legendary-resistance"> Has Legendary Resistance
+                        </label>
+                    </div>
+                    <div id="legendary-resistance-options" class="hidden">
+                        <div class="form-group">
+                            <label for="npc-legendary-resistance-count">Legendary Resistance Uses</label>
+                            <input type="number" id="npc-legendary-resistance-count" value="3" min="1" max="5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="npc-lair-actions">Lair Actions</label>
+                        <textarea id="npc-lair-actions" rows="3" placeholder="Lair actions..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="confirm-npc">Save NPC</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Rename NPC Copy -->
+    <div id="rename-modal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h3>Rename NPC</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="rename-input">Display Name</label>
+                    <input type="text" id="rename-input" placeholder="e.g., Goblin Boss">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="confirm-rename">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: View Full Stats -->
+    <div id="stats-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="stats-modal-title">Creature Stats</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="full-stats-content">
+                    <!-- Full stats will be rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
