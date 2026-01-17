@@ -70,6 +70,16 @@ export default function AdminDashboard() {
     setToken(storedToken);
     loadGroups(storedToken);
     loadActiveBattle(storedToken);
+
+    // Listen for messages from encounter manager iframe
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'npc-added-to-tracker') {
+        // Refresh the active battle when NPC is added from encounter manager
+        loadActiveBattle(storedToken);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, [router]);
 
   const loadGroups = async (authToken: string) => {

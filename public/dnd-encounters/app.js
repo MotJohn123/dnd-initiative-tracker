@@ -1984,6 +1984,10 @@ window.sendToTracker = async function(npcIndex) {
 
         if (updateRes.ok) {
             showToast(`${npc.displayName} added to initiative tracker!`, 'success');
+            // Notify parent window to refresh the battle display
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'npc-added-to-tracker' }, '*');
+            }
         } else {
             const errorData = await updateRes.json();
             showToast(`Failed to add NPC: ${errorData.error || 'Unknown error'}`, 'error');
