@@ -570,6 +570,7 @@ function renderNpcGroup(group) {
                         <span class="group-name">${escapeHtml(template.baseName || template.name)}</span>
                         <span class="group-info">${template.size} ${template.type}</span>
                         <span class="group-count">×${instances.length}</span>
+                        <button class="btn-icon btn-tracker" onclick="sendToTracker(${instances[0].index})" title="Send to Initiative Tracker"><i class="fas fa-crosshairs"></i></button>
                         <button class="btn-icon" onclick="duplicateNpc(${instances[0].index})" title="Add Copy"><i class="fas fa-plus"></i></button>
                     </div>
                 </td>
@@ -621,6 +622,7 @@ function renderNpcTableRow(npc, index, isGrouped = false) {
                 ${renderCompactTrackers(npc, index)}
             </td>
             <td class="col-actions">
+                <button class="btn-icon btn-tracker" onclick="sendToTracker(${index})" title="Send to Initiative Tracker"><i class="fas fa-crosshairs"></i></button>
                 <button class="btn-icon" onclick="showFullStats(${index})" title="View Stats"><i class="fas fa-book"></i></button>
                 ${isGrouped ? '' : `<button class="btn-icon" onclick="duplicateNpc(${index})" title="Copy"><i class="fas fa-copy"></i></button>`}
                 <button class="btn-icon btn-danger" onclick="deleteNpc(${index})" title="Delete"><i class="fas fa-trash"></i></button>
@@ -1469,34 +1471,44 @@ function extractCreatureFromCSV(values, headerMap) {
         }
     }
 
-    // Check for spellcasting
-    const isSpellcaster = actions.toLowerCase().includes('spellcasting') || 
-                          actions.toLowerCase().includes('spell save dc') ||
-                          actions.toLowerCase().includes('spell attack');
+    // Check for spellcasting - look in both actions and traits
+    const allSpellText = (actions + ' ' + traits).toLowerCase();
+    const isSpellcaster = allSpellText.includes('spellcasting') || 
+                          allSpellText.includes('spell save dc') ||
+                          allSpellText.includes('spell attack') ||
+                          allSpellText.includes('slots)');
     
     // Extract spell save DC
-    const spellDcMatch = (actions + traits).match(/spell save DC\s*(\d+)/i);
+    const spellDcMatch = (actions + ' ' + traits).match(/spell save DC\s*(\d+)/i);
     const spellDc = spellDcMatch ? parseInt(spellDcMatch[1]) : 13;
 
     // Extract spell attack bonus
-    const spellAtkMatch = (actions + traits).match(/\+(\d+)\s*to hit with spell/i);
+    const spellAtkMatch = (actions + ' ' + traits).match(/\+(\d+)\s*to hit with spell/i);
     const spellAttack = spellAtkMatch ? parseInt(spellAtkMatch[1]) : 5;
 
-    // Extract spell slots if present (e.g., "1st level (4 slots): ...")
+    // Extract spell slots if present (e.g., "1st level (4 slots): ..." or "1st-level (4 slots)")
     const spellSlots = {};
-    const slotRegex = /(\d+)(?:st|nd|rd|th)\s*(?:level)?\s*\((\d+)\s*slots?\)/gi;
+    // More flexible regex to handle various formats from 5eTools exports
+    const slotRegex = /(\d+)(?:st|nd|rd|th)[-\s]*level\s*\((\d+)\s*slots?\)/gi;
     let slotMatch;
-    while ((slotMatch = slotRegex.exec(actions + traits)) !== null) {
+    const spellSourceText = actions + ' ' + traits;
+    while ((slotMatch = slotRegex.exec(spellSourceText)) !== null) {
         const level = parseInt(slotMatch[1]);
         const slots = parseInt(slotMatch[2]);
         if (level >= 1 && level <= 9) {
             spellSlots[level] = slots;
         }
     }
+    
+    // Debug log for spell slots
+    if (isSpellcaster) {
+        console.log('Spellcaster detected:', name);
+        console.log('Spell slots found:', spellSlots);
+    }
 
-    // Extract spells text
+    // Extract spells text - look for Spellcasting block in either actions or traits
     let spells = '';
-    const spellsMatch = (actions + traits).match(/spellcasting[^]*?(?=\n\n|$)/i);
+    const spellsMatch = (traits + ' ' + actions).match(/spellcasting[^]*?(?=\n\n|$)/i);
     if (spellsMatch) {
         spells = spellsMatch[0];
     }
@@ -1875,6 +1887,112 @@ function showToast(message, type = 'info') {
         toast.remove();
     }, 3000);
 }
+
+// =====================================================
+// Initiative Tracker Integration
+// =====================================================
+window.sendToTracker = async function(npcIndex) {
+    const npc = state.currentEncounter?.npcs[npcIndex];
+    if (!npc) {
+        showToast('NPC not found', 'error');
+        return;
+    }
+
+    // Prompt for initiative
+    const initiativeStr = prompt(`Enter initiative for ${npc.displayName}:`, '10');
+    if (initiativeStr === null) return; // Cancelled
+    
+    const initiative = parseInt(initiativeStr) || 10;
+
+    // Get auth token from parent window's localStorage (if in iframe) or current localStorage
+    let token = localStorage.getItem('token');
+    
+    // If in iframe, try to get token from parent
+    if (!token && window.parent !== window) {
+        try {
+            token = window.parent.localStorage.getItem('token');
+        } catch (e) {
+            // Cross-origin access denied, that's okay
+        }
+    }
+
+    if (!token) {
+        showToast('Not logged in. Please log in to the admin dashboard first.', 'error');
+        return;
+    }
+
+    try {
+        // First, check if there's an active battle
+        const battlesRes = await fetch('/api/battles', {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (!battlesRes.ok) {
+            showToast('Failed to fetch battles. Please check your login.', 'error');
+            return;
+        }
+
+        const battlesData = await battlesRes.json();
+        const activeBattle = battlesData.battles?.find(b => b.isActive);
+
+        if (!activeBattle) {
+            showToast('No active battle. Start a battle first in the admin dashboard.', 'error');
+            return;
+        }
+
+        // Calculate max sort order
+        const maxSortOrder = Math.max(...activeBattle.characters.map(c => c.sortOrder || 0), 0);
+
+        // Create the new NPC character for the tracker
+        const newNPC = {
+            id: `npc-enc-${Date.now()}`,
+            name: npc.displayName,
+            isNPC: true,
+            isRevealed: false,
+            initiative: initiative,
+            sortOrder: maxSortOrder + 1,
+        };
+
+        // Get the current character before sorting changes
+        const sortedBefore = [...activeBattle.characters].sort((a, b) => {
+            if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+            return (a.sortOrder || 0) - (b.sortOrder || 0);
+        });
+        const currentCharacterId = sortedBefore[activeBattle.currentTurnIndex]?.id;
+
+        const updatedCharacters = [...activeBattle.characters, newNPC];
+
+        // Find where the current character will be after adding new NPC
+        const sortedAfter = [...updatedCharacters].sort((a, b) => {
+            if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+            return (a.sortOrder || 0) - (b.sortOrder || 0);
+        });
+        const newTurnIndex = sortedAfter.findIndex(c => c.id === currentCharacterId);
+
+        // Update the battle
+        const updateRes = await fetch(`/api/battles/${activeBattle._id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                characters: updatedCharacters,
+                currentTurnIndex: newTurnIndex >= 0 ? newTurnIndex : activeBattle.currentTurnIndex
+            }),
+        });
+
+        if (updateRes.ok) {
+            showToast(`${npc.displayName} added to initiative tracker!`, 'success');
+        } else {
+            const errorData = await updateRes.json();
+            showToast(`Failed to add NPC: ${errorData.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Failed to send to tracker:', error);
+        showToast('Failed to send to tracker. Check console for details.', 'error');
+    }
+};
 
 // =====================================================
 // Keyboard Shortcuts

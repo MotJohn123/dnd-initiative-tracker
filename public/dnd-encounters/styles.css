@@ -980,6 +980,15 @@ body {
     color: white;
 }
 
+.btn-icon.btn-tracker {
+    color: var(--primary);
+}
+
+.btn-icon.btn-tracker:hover {
+    background: var(--primary);
+    color: white;
+}
+
 /* Inline rename */
 .inline-rename-input {
     font-weight: 600;
