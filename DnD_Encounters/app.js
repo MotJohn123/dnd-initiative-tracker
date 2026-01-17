@@ -600,7 +600,7 @@ function renderNpcTableRow(npc, index, isGrouped = false) {
                 ${isGrouped ? '' : `<span class="npc-type-info">${npc.size} ${npc.type}</span>`}
             </td>
             <td class="col-ac">
-                ${isGrouped ? '' : `<span class="ac-value">${npc.ac}</span>`}
+                <span class="ac-value">${npc.ac}</span>
             </td>
             <td class="col-hp">
                 <div class="hp-cell">
@@ -1440,12 +1440,15 @@ function extractCreatureFromCSV(values, headerMap) {
     const limitedAbilities = [];
     
     // Pattern 1: "1/day each: Spell1, Spell2" or "2/day: Ability"
-    const limitedRegex1 = /(\d+)\/[Dd]ay(?:\s+each)?[:\s]+([^.]+?)(?:\.|$|\n)/g;
+    // Updated regex to stop at next X/day pattern, period, end of string, or newline
+    const limitedRegex1 = /(\d+)\/[Dd]ay(?:\s+each)?[:\s]+(.+?)(?=\d+\/[Dd]ay|\.|$|\n)/g;
     let limitedMatch;
     const spellsText = actions + ' ' + traits;
     while ((limitedMatch = limitedRegex1.exec(spellsText)) !== null) {
         const uses = parseInt(limitedMatch[1]);
-        const itemList = limitedMatch[2].split(/,|;/);
+        // Clean up the item list - remove trailing commas/semicolons and whitespace
+        const itemListText = limitedMatch[2].replace(/[,;]\s*$/, '').trim();
+        const itemList = itemListText.split(/,|;/);
         itemList.forEach(item => {
             const itemName = item.trim().replace(/\([^)]*\)/g, '').trim();
             if (itemName && itemName.length > 1 && !limitedAbilities.find(a => a.name.includes(itemName))) {
