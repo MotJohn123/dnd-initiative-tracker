@@ -569,6 +569,7 @@ function renderNpcGroup(group) {
                     <div class="group-header">
                         <span class="group-name">${escapeHtml(template.baseName || template.name)}</span>
                         <span class="group-info">${template.size} ${template.type}</span>
+                        <span class="group-ac">AC ${template.ac}</span>
                         <span class="group-count">×${instances.length}</span>
                         <button class="btn-icon btn-tracker" onclick="sendToTracker(${instances[0].index})" title="Send to Initiative Tracker"><i class="fas fa-crosshairs"></i></button>
                         <button class="btn-icon" onclick="duplicateNpc(${instances[0].index})" title="Add Copy"><i class="fas fa-plus"></i></button>

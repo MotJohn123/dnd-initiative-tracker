@@ -822,7 +822,7 @@ export default function AdminDashboard() {
   };
 
   const handleOpenEncounterNewWindow = () => {
-    window.open('/dnd-encounters/index.html', 'encounter-manager', 'width=1200,height=800');
+    window.open('/dnd-encounters/index.html', '_blank');
   };
 
   return (
@@ -838,27 +838,25 @@ export default function AdminDashboard() {
               <h1 className="text-4xl font-bold">🎲 DM Dashboard</h1>
               <div className="flex gap-2 items-center">
                 {activeBattle && (
-                  <>
-                    <button 
-                      onClick={handleToggleEncounterPanel}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        showEncounterPanel 
-                          ? 'bg-primary text-black' 
-                          : 'bg-purple-600 hover:bg-purple-700 text-white'
-                      }`}
-                      title="Toggle NPC Manager Panel"
-                    >
-                      {showEncounterPanel ? '✕ Close NPC Panel' : '🐉 NPC Manager'}
-                    </button>
-                    <button 
-                      onClick={handleOpenEncounterNewWindow}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                      title="Open NPC Manager in new window"
-                    >
-                      ↗️ New Window
-                    </button>
-                  </>
+                  <button 
+                    onClick={handleToggleEncounterPanel}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      showEncounterPanel 
+                        ? 'bg-primary text-black' 
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    }`}
+                    title="Toggle NPC Manager Panel"
+                  >
+                    {showEncounterPanel ? '✕ Close NPC Panel' : '🐉 NPC Manager'}
+                  </button>
                 )}
+                <button 
+                  onClick={handleOpenEncounterNewWindow}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                  title="Open Encounter Manager in new tab"
+                >
+                  📋 Encounters
+                </button>
                 <button onClick={handleLogout} className="btn-secondary">
                   Logout
                 </button>

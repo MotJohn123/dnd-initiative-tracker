@@ -662,6 +662,15 @@ body {
     font-size: 0.8rem;
 }
 
+.group-ac {
+    background: var(--secondary);
+    color: var(--text-light);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
 .group-count {
     background: var(--primary);
     color: var(--bg-dark);
