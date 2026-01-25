@@ -61,6 +61,22 @@ export default function AdminDashboard() {
   const [pcInitiative, setPcInitiative] = useState(10);
   const [addGroupId, setAddGroupId] = useState('');
 
+  // Helper function to handle unauthorized responses (expired token)
+  const handleUnauthorized = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/admin');
+  };
+
+  // Check if response indicates auth failure
+  const checkAuthResponse = (res: Response): boolean => {
+    if (res.status === 401) {
+      handleUnauthorized();
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (!storedToken) {
@@ -87,6 +103,7 @@ export default function AdminDashboard() {
       const res = await fetch('/api/groups', {
         headers: { Authorization: `Bearer ${authToken}` },
       });
+      if (!checkAuthResponse(res)) return;
       const data = await res.json();
       setGroups(data.groups || []);
     } catch (error) {
@@ -99,6 +116,7 @@ export default function AdminDashboard() {
       const res = await fetch('/api/battles', {
         headers: { Authorization: `Bearer ${authToken}` },
       });
+      if (!checkAuthResponse(res)) return;
       const data = await res.json();
       const active = data.battles?.find((b: Battle) => b.isActive);
       setActiveBattle(active || null);
@@ -124,6 +142,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         setShowGroupForm(false);
         setGroupName('');
@@ -159,6 +178,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         setShowGroupForm(false);
         setEditingGroup(null);
@@ -182,6 +202,7 @@ export default function AdminDashboard() {
         },
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         loadGroups(token);
       }
@@ -215,7 +236,7 @@ export default function AdminDashboard() {
     try {
       // First, end any existing active battle
       if (activeBattle) {
-        await fetch(`/api/battles/${activeBattle._id}`, {
+        const endRes = await fetch(`/api/battles/${activeBattle._id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -223,6 +244,7 @@ export default function AdminDashboard() {
           },
           body: JSON.stringify({ isActive: false }),
         });
+        if (!checkAuthResponse(endRes)) return;
       }
 
       // Then create the new battle
@@ -238,6 +260,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         setShowBattleForm(false);
         setBattleName('');
@@ -292,6 +315,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -347,6 +371,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -407,6 +432,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -445,6 +471,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ characters: updatedCharacters }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -490,6 +517,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -516,6 +544,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ characters: updatedCharacters }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -553,6 +582,7 @@ export default function AdminDashboard() {
           }),
         });
 
+        if (!checkAuthResponse(res)) return;
         if (res.ok) {
           const data = await res.json();
           setActiveBattle(data.battle);
@@ -594,6 +624,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -627,6 +658,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -665,6 +697,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -692,6 +725,7 @@ export default function AdminDashboard() {
         }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -742,6 +776,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ characters: updatedCharacters }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);
@@ -764,6 +799,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ isActive: false }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         setActiveBattle(null);
       }
@@ -785,6 +821,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ refreshExpiration: true }),
       });
 
+      if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
         setActiveBattle(data.battle);

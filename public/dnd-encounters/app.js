@@ -600,7 +600,7 @@ function renderNpcTableRow(npc, index, isGrouped = false) {
                 ${isGrouped ? '' : `<span class="npc-type-info">${npc.size} ${npc.type}</span>`}
             </td>
             <td class="col-ac">
-                ${isGrouped ? '' : `<span class="ac-value">${npc.ac}</span>`}
+                <span class="ac-value">${npc.ac}</span>
             </td>
             <td class="col-hp">
                 <div class="hp-cell">
