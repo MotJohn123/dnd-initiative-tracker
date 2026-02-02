@@ -1620,6 +1620,9 @@ function renderParsedCreatures() {
                     <div class="creature-controls">
                         <label>Qty:</label>
                         <input type="number" class="copy-count-input" id="copy-count-${index}" value="1" min="1" max="20">
+                        <button class="btn btn-add-single" onclick="addSingleCreatureToSelected(${index})" title="Add to selected encounter">
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
                 </div>
             `}).join('')}
@@ -1668,6 +1671,43 @@ window.addAllToNewEncounter = function() {
     // Open the encounter
     openEncounter(encounter.id);
     showToast(`Created "${encounterName}" with ${encounter.npcs.length} NPCs`, 'success');
+};
+
+window.addSingleCreatureToSelected = function(index) {
+    const creature = state.parsedCreatures[index];
+    if (!creature) return;
+    
+    const select = document.getElementById('target-encounter-select');
+    const encounterId = select ? select.value : '';
+    
+    if (!encounterId) {
+        showToast('Please select an encounter first', 'error');
+        return;
+    }
+    
+    const encounter = state.encounters.find(e => e.id === encounterId);
+    if (!encounter) {
+        showToast('Encounter not found', 'error');
+        return;
+    }
+    
+    const copyCountInput = document.getElementById(`copy-count-${index}`);
+    const copies = copyCountInput ? parseInt(copyCountInput.value) || 1 : 1;
+    
+    const template = {
+        baseName: creature.name,
+        ...creature,
+        spellSlots: creature.spellSlots || {}
+    };
+    
+    for (let i = 0; i < copies; i++) {
+        const npc = createNpcInstance(template, i + 1, copies);
+        encounter.npcs.push(npc);
+    }
+    
+    saveToStorage();
+    showToast(`Added ${copies}x ${creature.name} to "${encounter.name}"`, 'success');
+    renderParsedCreatures();
 };
 
 window.addAllToSelectedEncounter = function() {

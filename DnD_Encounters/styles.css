@@ -565,6 +565,29 @@ body {
     width: 55px;
 }
 
+.creature-controls .btn-add-single {
+    padding: 4px 8px;
+    min-width: unset;
+    background: var(--success);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.creature-controls .btn-add-single:hover {
+    background: #22a355;
+    transform: scale(1.1);
+}
+
+.creature-controls .btn-add-single i {
+    font-size: 0.85rem;
+}
+
 /* Encounter View */
 .encounter-header {
     display: flex;

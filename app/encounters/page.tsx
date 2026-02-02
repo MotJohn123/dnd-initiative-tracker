@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 
 export default function EncountersPage() {
-  const [htmlContent, setHtmlContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -13,19 +12,17 @@ export default function EncountersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center">
+      <div className="fixed inset-0 bg-[#1a1a2e] flex items-center justify-center">
         <div className="text-white text-xl">Loading Encounter Manager...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a2e]">
-      <iframe
-        src="/dnd-encounters/index.html"
-        className="w-full h-screen border-none"
-        title="D&D Encounter Manager"
-      />
-    </div>
+    <iframe
+      src="/dnd-encounters/index.html"
+      className="fixed inset-0 w-full h-full border-none"
+      title="D&D Encounter Manager"
+    />
   );
 }
