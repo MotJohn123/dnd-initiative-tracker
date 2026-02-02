@@ -863,7 +863,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Main Dashboard Panel */}
       <div 
         className={`${showEncounterPanel ? '' : 'w-full'} transition-all duration-300 overflow-auto`}
@@ -1435,7 +1435,7 @@ export default function AdminDashboard() {
       {/* Encounter Manager Panel - Split Screen */}
       {showEncounterPanel && (
         <div 
-          className="border-l-4 border-primary bg-[#1a1a2e] relative"
+          className="border-l-4 border-primary bg-[#1a1a2e] relative flex flex-col h-screen"
           style={{ width: `${encounterPanelWidth}%` }}
         >
           {/* Resize Handle */}
@@ -1465,7 +1465,7 @@ export default function AdminDashboard() {
           />
           
           {/* Panel Header */}
-          <div className="bg-[#252542] p-3 flex justify-between items-center border-b border-[#3a3a5a]">
+          <div className="bg-[#252542] p-3 flex justify-between items-center border-b border-[#3a3a5a] flex-shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-lg">🐉</span>
               <span className="font-bold text-[#c9a227]">NPC Manager</span>
@@ -1491,8 +1491,7 @@ export default function AdminDashboard() {
           {/* Iframe Content */}
           <iframe
             src="/dnd-encounters/index.html"
-            className="w-full border-none"
-            style={{ height: 'calc(100vh - 52px)' }}
+            className="w-full border-none flex-1"
             title="D&D Encounter Manager"
           />
         </div>
