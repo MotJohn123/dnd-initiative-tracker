@@ -50,6 +50,18 @@ export default function AdminDashboard() {
   const [showEncounterPanel, setShowEncounterPanel] = useState(false);
   const [encounterPanelWidth, setEncounterPanelWidth] = useState(50); // percentage
   
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  const handleConfirmCancel = () => {
+    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+  };
+
   // Form states
   const [groupName, setGroupName] = useState('');
   const [characters, setCharacters] = useState<Character[]>([{ name: '', imageUrl: '' }]);
@@ -192,23 +204,31 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteGroup = async (groupId: string) => {
-    if (!token || !confirm('Are you sure you want to delete this group?')) return;
+    if (!token) return;
+    
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Group',
+      message: 'Are you sure you want to delete this group?',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/groups/${groupId}`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
 
-    try {
-      const res = await fetch(`/api/groups/${groupId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!checkAuthResponse(res)) return;
-      if (res.ok) {
-        loadGroups(token);
-      }
-    } catch (error) {
-      console.error('Failed to delete group:', error);
-    }
+          if (!checkAuthResponse(res)) return;
+          if (res.ok) {
+            loadGroups(token);
+          }
+        } catch (error) {
+          console.error('Failed to delete group:', error);
+        }
+      },
+    });
   };
 
   const handleStartBattle = async (e: React.FormEvent) => {
@@ -710,29 +730,35 @@ export default function AdminDashboard() {
   const handleResetBattle = async () => {
     if (!token || !activeBattle) return;
     
-    if (!confirm('Reset battle to Round 1, Turn 1? This cannot be undone.')) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Reset Battle',
+      message: 'Reset battle to Round 1, Turn 1? This cannot be undone.',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/battles/${activeBattle._id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ 
+              currentTurnIndex: 0,
+              currentRound: 1
+            }),
+          });
 
-    try {
-      const res = await fetch(`/api/battles/${activeBattle._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ 
-          currentTurnIndex: 0,
-          currentRound: 1
-        }),
-      });
-
-      if (!checkAuthResponse(res)) return;
-      if (res.ok) {
-        const data = await res.json();
-        setActiveBattle(data.battle);
-      }
-    } catch (error) {
-      console.error('Failed to reset battle:', error);
-    }
+          if (!checkAuthResponse(res)) return;
+          if (res.ok) {
+            const data = await res.json();
+            setActiveBattle(data.battle);
+          }
+        } catch (error) {
+          console.error('Failed to reset battle:', error);
+        }
+      },
+    });
   };
 
   const handleMoveCharacter = async (charId: string, direction: 'up' | 'down') => {
@@ -1508,6 +1534,30 @@ export default function AdminDashboard() {
             <span>Next Turn</span>
             <span className="text-2xl">→</span>
           </button>
+        </div>
+      )}
+
+      {/* Custom Confirm Dialog Modal */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
+          <div className="card max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">{confirmDialog.title}</h3>
+            <p className="text-gray-300 mb-6">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleConfirmCancel}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
