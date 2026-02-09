@@ -26,11 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Deactivate any existing active battles for this user
-    await Battle.updateMany(
-      { userId: decoded.userId, isActive: true },
-      { isActive: false }
-    );
+    // Allow multiple active battles - no longer deactivating existing ones
 
     const battle = await Battle.create({
       name,
