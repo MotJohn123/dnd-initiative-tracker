@@ -1012,6 +1012,15 @@ body {
     color: white;
 }
 
+.btn-icon.btn-reset {
+    color: #17a2b8;
+}
+
+.btn-icon.btn-reset:hover {
+    background: #17a2b8;
+    color: white;
+}
+
 /* Inline rename */
 .inline-rename-input {
     font-weight: 600;

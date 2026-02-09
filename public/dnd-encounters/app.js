@@ -625,6 +625,7 @@ function renderNpcTableRow(npc, index, isGrouped = false) {
                 <button class="btn-icon btn-tracker" onclick="sendToTracker(${index})" title="Send to Initiative Tracker"><i class="fas fa-crosshairs"></i></button>
                 <button class="btn-icon" onclick="showFullStats(${index})" title="View Stats"><i class="fas fa-book"></i></button>
                 ${isGrouped ? '' : `<button class="btn-icon" onclick="duplicateNpc(${index})" title="Copy"><i class="fas fa-copy"></i></button>`}
+                <button class="btn-icon btn-reset" onclick="resetCreature(${index})" title="Reset HP & Abilities"><i class="fas fa-undo"></i></button>
                 <button class="btn-icon btn-danger" onclick="deleteNpc(${index})" title="Delete"><i class="fas fa-trash"></i></button>
             </td>
         </tr>
@@ -715,6 +716,9 @@ function renderNpcCard(npc, index) {
                     </button>
                     <button onclick="duplicateNpc(${index})" title="Duplicate">
                         <i class="fas fa-copy"></i>
+                    </button>
+                    <button onclick="resetCreature(${index})" title="Reset HP & Abilities">
+                        <i class="fas fa-undo"></i>
                     </button>
                     <button onclick="deleteNpc(${index})" title="Delete">
                         <i class="fas fa-trash"></i>
@@ -1148,6 +1152,39 @@ window.deleteNpc = function(index) {
     saveToStorage();
     renderNpcs();
     showToast('NPC deleted', 'success');
+};
+
+window.resetCreature = function(index) {
+    const npc = state.currentEncounter.npcs[index];
+    
+    // Reset HP
+    npc.currentHp = npc.maxHp;
+    npc.tempHp = 0;
+    
+    // Reset spell slots
+    if (npc.spellSlotsState) {
+        for (const level in npc.spellSlotsState) {
+            npc.spellSlotsState[level].current = npc.spellSlotsState[level].max;
+        }
+    }
+    
+    // Reset recharge abilities
+    if (npc.rechargeState) {
+        npc.rechargeState.forEach(ability => ability.available = true);
+    }
+    
+    // Reset limited use abilities
+    if (npc.limitedState) {
+        npc.limitedState.forEach(ability => ability.currentUses = ability.maxUses);
+    }
+    
+    // Reset legendary actions and resistance
+    npc.legendaryActionsRemaining = npc.legendaryActionsCount;
+    npc.legendaryResistanceRemaining = npc.legendaryResistanceCount;
+    
+    saveToStorage();
+    renderNpcs();
+    showToast(`${npc.displayName} reset`, 'success');
 };
 
 window.showFullStats = function(index) {
