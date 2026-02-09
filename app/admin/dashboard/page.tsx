@@ -40,7 +40,8 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [groups, setGroups] = useState<PlayerGroup[]>([]);
-  const [activeBattle, setActiveBattle] = useState<Battle | null>(null);
+  const [activeBattles, setActiveBattles] = useState<Battle[]>([]);
+  const [selectedBattleId, setSelectedBattleId] = useState<string | null>(null);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [showBattleForm, setShowBattleForm] = useState(false);
   const [showAddNPC, setShowAddNPC] = useState(false);
@@ -49,6 +50,9 @@ export default function AdminDashboard() {
   const [editingGroup, setEditingGroup] = useState<PlayerGroup | null>(null);
   const [showEncounterPanel, setShowEncounterPanel] = useState(false);
   const [encounterPanelWidth, setEncounterPanelWidth] = useState(50); // percentage
+  
+  // Computed: currently selected active battle
+  const activeBattle = activeBattles.find(b => b._id === selectedBattleId) || activeBattles[0] || null;
   
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -60,6 +64,23 @@ export default function AdminDashboard() {
 
   const handleConfirmCancel = () => {
     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Helper to update a single battle in the activeBattles array
+  const updateBattleInList = (updatedBattle: Battle) => {
+    setActiveBattles(prev => prev.map(b => b._id === updatedBattle._id ? updatedBattle : b));
+  };
+
+  // Helper to remove a battle from the activeBattles array
+  const removeBattleFromList = (battleId: string) => {
+    setActiveBattles(prev => {
+      const remaining = prev.filter(b => b._id !== battleId);
+      // If we removed the selected battle, select another one
+      if (selectedBattleId === battleId) {
+        setSelectedBattleId(remaining[0]?._id || null);
+      }
+      return remaining;
+    });
   };
 
   // Form states
@@ -130,8 +151,14 @@ export default function AdminDashboard() {
       });
       if (!checkAuthResponse(res)) return;
       const data = await res.json();
-      const active = data.battles?.find((b: Battle) => b.isActive);
-      setActiveBattle(active || null);
+      const allActive = (data.battles || []).filter((b: Battle) => b.isActive);
+      setActiveBattles(allActive);
+      // If current selection is no longer valid, select the first
+      if (selectedBattleId && !allActive.find((b: Battle) => b._id === selectedBattleId)) {
+        setSelectedBattleId(allActive[0]?._id || null);
+      } else if (!selectedBattleId && allActive.length > 0) {
+        setSelectedBattleId(allActive[0]._id);
+      }
     } catch (error) {
       console.error('Failed to load battles:', error);
     }
@@ -254,20 +281,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      // First, end any existing active battle
-      if (activeBattle) {
-        const endRes = await fetch(`/api/battles/${activeBattle._id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ isActive: false }),
-        });
-        if (!checkAuthResponse(endRes)) return;
-      }
-
-      // Then create the new battle
+      // Create the new battle (don't end existing ones - support multiple battles)
       const res = await fetch('/api/battles', {
         method: 'POST',
         headers: {
@@ -282,9 +296,14 @@ export default function AdminDashboard() {
 
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
+        const data = await res.json();
         setShowBattleForm(false);
         setBattleName('');
         setSelectedGroupId('');
+        // Switch to the newly created battle
+        if (data.battle?._id) {
+          setSelectedBattleId(data.battle._id);
+        }
         loadActiveBattle(token);
       }
     } catch (error) {
@@ -338,7 +357,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
         setShowAddNPC(false);
         setNpcName('');
         setNpcInitiative(10);
@@ -394,7 +413,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
         setShowAddPC(false);
         setPcName('');
         setPcInitiative(10);
@@ -455,7 +474,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
         setShowAddGroup(false);
         setAddGroupId('');
       }
@@ -494,7 +513,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
       }
     } catch (error) {
       console.error('Failed to add lair action:', error);
@@ -540,7 +559,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
       }
     } catch (error) {
       console.error('Failed to update initiative:', error);
@@ -567,7 +586,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
       }
     } catch (error) {
       console.error('Failed to toggle reveal:', error);
@@ -605,7 +624,7 @@ export default function AdminDashboard() {
         if (!checkAuthResponse(res)) return;
         if (res.ok) {
           const data = await res.json();
-          setActiveBattle(data.battle);
+          updateBattleInList(data.battle);
         }
       } catch (error) {
         console.error('Failed to remove character:', error);
@@ -647,7 +666,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
       }
     } catch (error) {
       console.error('Failed to remove character:', error);
@@ -681,7 +700,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
       }
     } catch (error) {
       console.error('Failed to advance turn:', error);
@@ -720,7 +739,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
       }
     } catch (error) {
       console.error('Failed to go back:', error);
@@ -752,7 +771,7 @@ export default function AdminDashboard() {
           if (!checkAuthResponse(res)) return;
           if (res.ok) {
             const data = await res.json();
-            setActiveBattle(data.battle);
+            updateBattleInList(data.battle);
           }
         } catch (error) {
           console.error('Failed to reset battle:', error);
@@ -805,7 +824,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
       }
     } catch (error) {
       console.error('Failed to move character:', error);
@@ -827,7 +846,7 @@ export default function AdminDashboard() {
 
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
-        setActiveBattle(null);
+        removeBattleFromList(activeBattle._id);
       }
     } catch (error) {
       console.error('Failed to end battle:', error);
@@ -850,7 +869,7 @@ export default function AdminDashboard() {
       if (!checkAuthResponse(res)) return;
       if (res.ok) {
         const data = await res.json();
-        setActiveBattle(data.battle);
+        updateBattleInList(data.battle);
         alert('Battle extended by 8 hours!');
       }
     } catch (error) {
@@ -931,7 +950,29 @@ export default function AdminDashboard() {
           <div className="card mb-8">
             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
               <div className="flex-1">
-                <h2 className="text-2xl font-bold">⚔️ {activeBattle.name}</h2>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h2 className="text-2xl font-bold">⚔️ {activeBattle.name}</h2>
+                  {activeBattles.length > 1 && (
+                    <select
+                      value={selectedBattleId || ''}
+                      onChange={(e) => setSelectedBattleId(e.target.value)}
+                      className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1 text-sm cursor-pointer hover:border-primary transition-colors"
+                    >
+                      {activeBattles.map((battle) => (
+                        <option key={battle._id} value={battle._id}>
+                          {battle.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    onClick={() => setShowBattleForm(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap"
+                    title="Start another battle"
+                  >
+                    + New Battle
+                  </button>
+                </div>
                 <p className="text-gray-400 text-sm mt-1">
                   <span className="text-primary font-semibold">Round {activeBattle.currentRound || 1}</span>
                   {' • '}
@@ -1085,7 +1126,7 @@ export default function AdminDashboard() {
                         const updatedCharacters = activeBattle.characters.map(c =>
                           c.id === char.id ? { ...c, initiative: newInitiative } : c
                         );
-                        setActiveBattle({ ...activeBattle, characters: updatedCharacters });
+                        updateBattleInList({ ...activeBattle, characters: updatedCharacters });
                       }}
                       onBlur={(e) => {
                         // Save to database and sort when user leaves the field
