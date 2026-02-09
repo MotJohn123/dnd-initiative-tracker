@@ -206,6 +206,81 @@ function closeAllModals() {
     });
 }
 
+// Custom Confirm Dialog (replaces native confirm() for better split-screen support)
+function showConfirmDialog(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-dialog-modal');
+        const titleEl = document.getElementById('confirm-dialog-title');
+        const messageEl = document.getElementById('confirm-dialog-message');
+        const okBtn = document.getElementById('confirm-dialog-ok');
+        const cancelBtn = document.getElementById('confirm-dialog-cancel');
+        const closeBtn = modal.querySelector('.modal-close');
+        
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        
+        const cleanup = () => {
+            modal.classList.remove('active');
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            closeBtn.removeEventListener('click', onCancel);
+            modal.removeEventListener('click', onBackdrop);
+        };
+        
+        const onOk = () => { cleanup(); resolve(true); };
+        const onCancel = () => { cleanup(); resolve(false); };
+        const onBackdrop = (e) => { if (e.target === modal) { cleanup(); resolve(false); } };
+        
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onBackdrop);
+        
+        modal.classList.add('active');
+    });
+}
+
+// Custom Prompt Dialog (replaces native prompt() for better split-screen support)
+function showPromptDialog(message, defaultValue = '', title = 'Enter Value') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('prompt-dialog-modal');
+        const titleEl = document.getElementById('prompt-dialog-title');
+        const labelEl = document.getElementById('prompt-dialog-label');
+        const inputEl = document.getElementById('prompt-dialog-input');
+        const okBtn = document.getElementById('prompt-dialog-ok');
+        const cancelBtn = document.getElementById('prompt-dialog-cancel');
+        const closeBtn = modal.querySelector('.modal-close');
+        
+        titleEl.textContent = title;
+        labelEl.textContent = message;
+        inputEl.value = defaultValue;
+        
+        const cleanup = () => {
+            modal.classList.remove('active');
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            closeBtn.removeEventListener('click', onCancel);
+            modal.removeEventListener('click', onBackdrop);
+            inputEl.removeEventListener('keydown', onKeydown);
+        };
+        
+        const onOk = () => { cleanup(); resolve(inputEl.value); };
+        const onCancel = () => { cleanup(); resolve(null); };
+        const onBackdrop = (e) => { if (e.target === modal) { cleanup(); resolve(null); } };
+        const onKeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); onOk(); } };
+        
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onBackdrop);
+        inputEl.addEventListener('keydown', onKeydown);
+        
+        modal.classList.add('active');
+        inputEl.focus();
+        inputEl.select();
+    });
+}
+
 // =====================================================
 // Encounters Management
 // =====================================================
@@ -285,12 +360,14 @@ function openEncounter(encounterId) {
     renderNpcs();
 }
 
-function deleteCurrentEncounter() {
+async function deleteCurrentEncounter() {
     if (!state.currentEncounter) return;
 
-    if (!confirm(`Are you sure you want to delete "${state.currentEncounter.name}"?`)) {
-        return;
-    }
+    const confirmed = await showConfirmDialog(
+        `Are you sure you want to delete "${state.currentEncounter.name}"?`,
+        'Delete Encounter'
+    );
+    if (!confirmed) return;
 
     state.encounters = state.encounters.filter(e => e.id !== state.currentEncounter.id);
     state.currentEncounter = null;
@@ -1144,9 +1221,10 @@ window.duplicateNpc = function(index) {
     showToast(`Added ${copy.displayName}`, 'success');
 };
 
-window.deleteNpc = function(index) {
+window.deleteNpc = async function(index) {
     const npc = state.currentEncounter.npcs[index];
-    if (!confirm(`Delete ${npc.displayName}?`)) return;
+    const confirmed = await showConfirmDialog(`Delete ${npc.displayName}?`, 'Delete NPC');
+    if (!confirmed) return;
 
     state.currentEncounter.npcs.splice(index, 1);
     saveToStorage();
@@ -1981,8 +2059,12 @@ window.sendToTracker = async function(npcIndex) {
         return;
     }
 
-    // Prompt for initiative
-    const initiativeStr = prompt(`Enter initiative for ${npc.displayName}:`, '10');
+    // Prompt for initiative using custom dialog
+    const initiativeStr = await showPromptDialog(
+        `Enter initiative for ${npc.displayName}:`,
+        '10',
+        'Add to Initiative'
+    );
     if (initiativeStr === null) return; // Cancelled
     
     const initiative = parseInt(initiativeStr) || 10;
