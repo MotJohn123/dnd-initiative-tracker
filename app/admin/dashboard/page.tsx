@@ -904,7 +904,11 @@ export default function AdminDashboard() {
   };
 
   const handleOpenEncounterNewWindow = () => {
-    window.open('/dnd-encounters/index.html', '_blank');
+    const encounterUrl = '/encounters';
+    const newWindow = window.open(encounterUrl, '_blank', 'noopener,noreferrer');
+    if (!newWindow) {
+      router.push(encounterUrl);
+    }
   };
 
   return (

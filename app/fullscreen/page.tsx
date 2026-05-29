@@ -165,26 +165,32 @@ export default function FullscreenTracker() {
     >
       {/* Compact Header */}
       <header
-        className={`flex-shrink-0 flex items-center justify-between px-4 py-2 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`flex-shrink-0 flex items-center justify-between gap-3 px-3 sm:px-4 py-2 bg-black/30 backdrop-blur-sm transition-opacity duration-300 min-w-0 ${
           showControls ? 'opacity-100' : 'opacity-60'
         }`}
         style={{ height: headerHeight }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <Link
             href="/"
-            className="text-gray-400 hover:text-white transition-colors text-sm"
+            className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm whitespace-nowrap flex-shrink-0"
           >
             ← Home
           </Link>
-          <h1 className="text-xl sm:text-2xl font-bold">⚔️ {battle.name}</h1>
+          <h1 className="text-lg sm:text-2xl font-bold truncate" title={battle.name}>
+            ⚔️ {battle.name}
+          </h1>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <span className="text-primary font-bold text-lg">Round {battle.currentRound || 1}</span>
-            <span className="text-gray-400 text-sm ml-2">
-              Turn {battle.currentTurnIndex + 1}/{sortedCharacters.length}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="text-right leading-tight min-w-0">
+            <span className="text-primary font-bold text-base sm:text-lg block">
+              <span className="hidden sm:inline">Round </span>
+              {battle.currentRound || 1}
+            </span>
+            <span className="text-gray-400 text-xs sm:text-sm block">
+              <span className="hidden sm:inline">Turn </span>
+              {battle.currentTurnIndex + 1}/{sortedCharacters.length}
             </span>
           </div>
 
@@ -192,7 +198,7 @@ export default function FullscreenTracker() {
             <select
               value={selectedBattleId || battle._id}
               onChange={(e) => setSelectedBattleId(e.target.value)}
-              className="input-field max-w-[150px] text-sm py-1"
+              className="input-field max-w-[120px] sm:max-w-[150px] text-xs sm:text-sm py-1"
             >
               {availableBattles.map((b) => (
                 <option key={b._id} value={b._id}>
@@ -213,9 +219,7 @@ export default function FullscreenTracker() {
             </div>
           </div>
         ) : (
-          <div
-            className="h-full w-full flex flex-col gap-2"
-          >
+          <div className="h-full w-full flex flex-col gap-2">
             {sortedCharacters.map((character, index) => {
               const isCurrentTurn = index === battle.currentTurnIndex;
               const displayName = character.isNPC && !character.isRevealed ? '?' : character.name;
