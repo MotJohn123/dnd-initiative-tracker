@@ -5,10 +5,11 @@ import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    const { id } = await params;
     
     const token = getTokenFromRequest(request);
     if (!token) {
@@ -23,7 +24,7 @@ export async function PUT(
     const { name, characters } = await request.json();
 
     const group = await PlayerGroup.findOne({
-      _id: params.id,
+      _id: id,
       userId: decoded.userId,
     });
 
@@ -48,10 +49,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    const { id } = await params;
     
     const token = getTokenFromRequest(request);
     if (!token) {
@@ -64,7 +66,7 @@ export async function DELETE(
     }
 
     const result = await PlayerGroup.deleteOne({
-      _id: params.id,
+      _id: id,
       userId: decoded.userId,
     });
 

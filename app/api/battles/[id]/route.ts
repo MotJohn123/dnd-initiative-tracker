@@ -5,10 +5,11 @@ import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    const { id } = await params;
     
     const token = getTokenFromRequest(request);
     if (!token) {
@@ -23,7 +24,7 @@ export async function PUT(
     const updates = await request.json();
 
     const battle = await Battle.findOne({
-      _id: params.id,
+      _id: id,
       userId: decoded.userId,
     });
 
@@ -66,10 +67,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
+    const { id } = await params;
     
     const token = getTokenFromRequest(request);
     if (!token) {
@@ -82,7 +84,7 @@ export async function DELETE(
     }
 
     const result = await Battle.deleteOne({
-      _id: params.id,
+      _id: id,
       userId: decoded.userId,
     });
 
