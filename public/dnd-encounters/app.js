@@ -617,7 +617,7 @@ function renderNpcs() {
                 <tr>
                     <th class="col-name">Name</th>
                     <th class="col-type">Type</th>
-                    <th class="col-ac">AC</th>
+                    <th class="col-ac">AC / PP</th>
                     <th class="col-hp">HP</th>
                     <th class="col-trackers">Trackers</th>
                     <th class="col-actions"></th>
@@ -678,6 +678,7 @@ function renderNpcTableRow(npc, index, isGrouped = false) {
             </td>
             <td class="col-ac">
                 <span class="ac-value">${npc.ac}</span>
+                <span class="passive-perception" title="Passive Perception">PP ${getPassivePerception(npc)}</span>
             </td>
             <td class="col-hp">
                 <div class="hp-cell">
@@ -707,6 +708,21 @@ function renderNpcTableRow(npc, index, isGrouped = false) {
             </td>
         </tr>
     `;
+}
+
+function getPassivePerception(npc) {
+    const passivePerceptionMatch = (npc.senses || '').match(/passive perception\s+(\d+)/i);
+    if (passivePerceptionMatch) {
+        return parseInt(passivePerceptionMatch[1], 10);
+    }
+
+    const perceptionSkillMatch = (npc.skills || '').match(/perception\s*\+?\s*(-?\d+)/i);
+    if (perceptionSkillMatch) {
+        return 10 + parseInt(perceptionSkillMatch[1], 10);
+    }
+
+    const wisdom = npc.stats?.wis ?? 10;
+    return 10 + Math.floor((wisdom - 10) / 2);
 }
 
 function renderCompactTrackers(npc, index) {
